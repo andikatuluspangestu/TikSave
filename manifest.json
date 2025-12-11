@@ -1,0 +1,21 @@
+{
+  "name": "TikSave - TikTok Downloader",
+  "short_name": "TikSave",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111318",
+  "theme_color": "#4C74FF",
+  "description": "Download TikTok videos without watermark instantly.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/724/724933.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/724/724933.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
