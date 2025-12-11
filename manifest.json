@@ -1,7 +1,7 @@
 {
   "name": "TikSave - TikTok Downloader",
   "short_name": "TikSave",
-  "start_url": "/",
+  "start_url": "/?source=pwa",
   "display": "standalone",
   "background_color": "#111318",
   "theme_color": "#4C74FF",
@@ -17,5 +17,14 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "/",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }

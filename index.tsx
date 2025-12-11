@@ -44,6 +44,7 @@ const App = () => {
   // --- Effects ---
 
   useEffect(() => {
+    // 1. Theme Initialization
     const savedTheme = localStorage.getItem("tiksave-theme") || localStorage.getItem("tiksavex-theme") as "light" | "dark" | null;
     const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     
@@ -53,6 +54,7 @@ const App = () => {
       setTheme("dark");
     }
 
+    // 2. History Initialization
     const savedHistory = localStorage.getItem("tiksave-history") || localStorage.getItem("tiksavex-history");
     if (savedHistory) {
       try {
@@ -61,6 +63,33 @@ const App = () => {
         console.error("Failed to parse history", e);
       }
     }
+
+    // 3. Handle Share Target API (Incoming shared links)
+    const handleSharedUrl = () => {
+        const params = new URLSearchParams(window.location.search);
+        // TikTok usually shares text containing the link in the 'text' param
+        const sharedText = params.get('text') || params.get('url') || params.get('title');
+
+        if (sharedText) {
+            // Extract URL using regex because share text often contains extra words
+            // e.g. "Check out this video! https://vm.tiktok.com/..."
+            const urlMatch = sharedText.match(/(https?:\/\/[^\s]+)/);
+            if (urlMatch && urlMatch[0]) {
+                const extractedUrl = urlMatch[0];
+                if (extractedUrl.includes("tiktok.com")) {
+                    setUrl(extractedUrl);
+                    // Slight delay to allow UI to render before processing
+                    setTimeout(() => handleProcess(extractedUrl), 100);
+                    
+                    // Clean URL bar
+                    window.history.replaceState({}, document.title, "/");
+                }
+            }
+        }
+    };
+
+    handleSharedUrl();
+
   }, []);
 
   useEffect(() => {
@@ -436,7 +465,8 @@ const App = () => {
       {/* Footer */}
       <footer className="py-8 text-center text-xs text-gray-400 dark:text-gray-600">
         <p className="font-medium">TikSave &copy; {new Date().getFullYear()}</p>
-        <p className="mt-1 opacity-75">Not affiliated with TikTok or ByteDance.</p>
+        <p className="mt-2 font-medium text-gray-500 dark:text-gray-400">Build With 🤍 by Andika Tulus Pangestu</p>
+        <p className="mt-1 opacity-75 text-[10px]">Not affiliated with TikTok or ByteDance.</p>
       </footer>
     </div>
   );
