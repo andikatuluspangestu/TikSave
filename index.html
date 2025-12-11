@@ -2,8 +2,8 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#4C74FF" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="theme-color" content="#FF6600" />
     <meta name="description" content="Download TikTok videos without watermark. Fast, free, and unlimited." />
     <title>TikSave - TikTok Downloader</title>
     
@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/724/724933.png" />
     
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script>
       tailwind.config = {
@@ -20,21 +20,28 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Inter', 'sans-serif'],
+              sans: ['Outfit', 'sans-serif'],
             },
             colors: {
-              primary: '#4C74FF',
-              accent: '#90A8FF',
+              primary: '#FF6600', // Vibrant Orange
+              primaryLight: '#FF8533',
+              accent: '#FFF0E5',
               dark: {
-                bg: '#111318',
-                card: '#1C1F26',
-                border: '#2A2E37'
+                bg: '#0F0F12',
+                card: '#1C1C21',
+                border: '#2D2D35',
+                input: '#27272E'
               },
               light: {
-                bg: '#F7F8FC',
+                bg: '#F8F9FD',
                 card: '#FFFFFF',
-                border: '#E2E4E9'
+                border: '#EEEEEE',
+                input: '#F3F4F6'
               }
+            },
+            boxShadow: {
+              'soft': '0 4px 20px -2px rgba(0, 0, 0, 0.05)',
+              'glow': '0 4px 20px -2px rgba(255, 102, 0, 0.3)',
             }
           }
         }
@@ -42,16 +49,25 @@
     </script>
     <style>
       body {
-        font-family: 'Inter', sans-serif;
-        transition: background-color 0.3s ease, color 0.3s ease;
+        font-family: 'Outfit', sans-serif;
+        -webkit-tap-highlight-color: transparent;
       }
+      
+      /* Hide Scrollbar but keep functionality */
+      .no-scrollbar::-webkit-scrollbar {
+        display: none;
+      }
+      .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
       .loader {
-        border: 3px solid #f3f3f3;
+        border: 3px solid rgba(255,255,255,0.3);
         border-radius: 50%;
-        border-top: 3px solid #4C74FF;
-        width: 24px;
-        height: 24px;
-        -webkit-animation: spin 1s linear infinite; /* Safari */
+        border-top: 3px solid #fff;
+        width: 20px;
+        height: 20px;
         animation: spin 1s linear infinite;
       }
       @keyframes spin {
@@ -59,31 +75,25 @@
         100% { transform: rotate(360deg); }
       }
       
-      /* Progress Bar Animation */
-      .progress-bar-container {
-        width: 100%;
-        height: 4px;
-        background-color: rgba(76, 116, 255, 0.2);
-        overflow: hidden;
-        position: relative;
+      .gradient-text {
+        background: linear-gradient(to right, #FF6600, #FF9933);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
       }
-      .progress-bar-value {
-        width: 100%;
-        height: 100%;
-        background-color: #4C74FF;
-        position: absolute;
-        transform: translateX(-100%);
-        animation: shimmer 2s infinite ease-in-out;
+
+      .glass-nav {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(0,0,0,0.05);
       }
-      @keyframes shimmer {
-        0% { transform: translateX(-100%); }
-        50% { transform: translateX(0%); }
-        100% { transform: translateX(100%); }
+      .dark .glass-nav {
+        background: rgba(28, 28, 33, 0.95);
+        border-top: 1px solid rgba(255,255,255,0.05);
       }
 
       /* Custom Animations */
       .animate-slide-up {
-        animation: slideUp 0.4s ease-out;
+        animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
       }
       .animate-fade-in {
         animation: fadeIn 0.3s ease-out;
@@ -110,18 +120,5 @@
   <body class="bg-light-bg dark:bg-dark-bg text-gray-800 dark:text-gray-100 min-h-screen">
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
-    <script>
-      if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then(registration => {
-              console.log('ServiceWorker registration successful with scope: ', registration.scope);
-            })
-            .catch(err => {
-              console.log('ServiceWorker registration failed: ', err);
-            });
-        });
-      }
-    </script>
   </body>
 </html>
