@@ -194,7 +194,7 @@ const App = () => {
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-orange-500 flex items-center justify-center text-white shadow-glow">
             <i className="fas fa-arrow-down text-sm"></i>
           </div>
-          <h1 className="text-lg font-bold text-gray-900 dark:text-white">Video Downloader</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">TikSave</h1>
         </div>
         <button onClick={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="w-9 h-9 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm transition-transform active:scale-95">
             <i className={`fas fa-${theme === 'light' ? 'moon' : 'sun'}`}></i>
