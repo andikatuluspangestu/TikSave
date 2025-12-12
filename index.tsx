@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useLayoutEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 
 // --- Types ---
@@ -32,13 +32,33 @@ const App = () => {
   const [isDownloading, setIsDownloading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VideoData | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [theme, setTheme] = useState<"light" | "dark">("light");
+  
+  // Lazy State Initialization for Performance
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const saved = localStorage.getItem("tiksave-history");
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+
+  const [theme, setTheme] = useState<"light" | "dark">(() => {
+    if (typeof window === 'undefined') return 'light';
+    try {
+      const saved = localStorage.getItem("tiksave-theme") as "light" | "dark" | null;
+      if (saved) return saved;
+      return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    } catch { return 'light'; }
+  });
   
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [settingsView, setSettingsView] = useState<'general' | 'about'>('general');
-  const [autoDownload, setAutoDownload] = useState(false);
+  const [autoDownload, setAutoDownload] = useState(() => {
+     if (typeof window === 'undefined') return false;
+     const saved = localStorage.getItem("tiksave-auto-download");
+     return saved ? JSON.parse(saved) : false;
+  });
 
   // --- Helpers ---
   const extractUrl = (text: string): string | null => {
@@ -77,23 +97,23 @@ const App = () => {
   };
 
   // --- Effects ---
+  
+  // Use useLayoutEffect for Theme to prevent flicker
+  useLayoutEffect(() => {
+    document.documentElement.classList.toggle("dark", theme === "dark");
+    localStorage.setItem("tiksave-theme", theme);
+  }, [theme]);
+
+  // Regular Effects
   useEffect(() => {
-    // Theme
-    const savedTheme = localStorage.getItem("tiksave-theme") as "light" | "dark" | null;
-    const systemPrefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    if (savedTheme) setTheme(savedTheme);
-    else if (systemPrefersDark) setTheme("dark");
+    localStorage.setItem("tiksave-history", JSON.stringify(history));
+  }, [history]);
 
-    // History
-    const savedHistory = localStorage.getItem("tiksave-history");
-    if (savedHistory) {
-      try { setHistory(JSON.parse(savedHistory)); } catch (e) { console.error(e); }
-    }
+  useEffect(() => {
+    localStorage.setItem("tiksave-auto-download", JSON.stringify(autoDownload));
+  }, [autoDownload]);
 
-    // Settings
-    const savedAutoDL = localStorage.getItem("tiksave-auto-download");
-    if (savedAutoDL) setAutoDownload(JSON.parse(savedAutoDL));
-
+  useEffect(() => {
     // Share Target Handling
     const params = new URLSearchParams(window.location.search);
     const sharedText = params.get('text') || params.get('url');
@@ -106,19 +126,6 @@ const App = () => {
         }
     }
   }, []);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle("dark", theme === "dark");
-    localStorage.setItem("tiksave-theme", theme);
-  }, [theme]);
-
-  useEffect(() => {
-    localStorage.setItem("tiksave-history", JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
-    localStorage.setItem("tiksave-auto-download", JSON.stringify(autoDownload));
-  }, [autoDownload]);
 
   // --- Handlers ---
   const handleProcess = async (inputUrl: string = url) => {

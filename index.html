@@ -7,10 +7,28 @@
     <meta name="description" content="Download TikTok videos without watermark. Fast, free, and unlimited." />
     <title>TikSave - TikTok Downloader</title>
     
+    <!-- Performance Optimization: Preconnect to CDNs -->
+    <link rel="preconnect" href="https://cdn.tailwindcss.com" crossorigin />
+    <link rel="preconnect" href="https://esm.sh" crossorigin />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="dns-prefetch" href="https://www.tikwm.com" />
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json" />
     <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/724/724933.png" />
     
+    <!-- Theme Script (Prevents FOUC/Flash) -->
+    <script>
+      try {
+        if (localStorage.getItem('tiksave-theme') === 'dark' || (!('tiksave-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      } catch (_) {}
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -110,9 +128,10 @@
   <script type="importmap">
 {
   "imports": {
-    "react/": "https://esm.sh/react@^19.2.1/",
-    "react": "https://esm.sh/react@^19.2.1",
-    "react-dom/": "https://esm.sh/react-dom@^19.2.1/"
+    "react": "https://esm.sh/react@19.0.0?dev=false",
+    "react/": "https://esm.sh/react@19.0.0&dev=false/",
+    "react-dom/client": "https://esm.sh/react-dom@19.0.0/client?dev=false",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/"
   }
 }
 </script>
