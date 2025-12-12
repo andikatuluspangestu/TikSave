@@ -417,25 +417,27 @@ const App = () => {
       </header>
 
       {/* Main Content Area (Input) */}
-      <div className={`flex-1 flex flex-col justify-center px-6 md:px-0 relative z-10 w-full transition-all duration-300 ${history.length > 0 ? 'md:mr-80 lg:mr-96' : ''}`}>
-        <div className="w-full max-w-lg md:max-w-2xl mx-auto text-center space-y-8 md:space-y-12 py-20 md:py-0">
+      <div className={`flex-1 flex flex-col min-h-screen px-6 md:px-0 relative z-10 w-full transition-all duration-300 ${history.length > 0 ? 'md:mr-80 lg:mr-96' : ''}`}>
+        
+        {/* Vertical Spacer for Mobile Centering */}
+        <div className="flex-1 flex flex-col justify-center w-full max-w-lg md:max-w-2xl mx-auto text-center space-y-8 md:space-y-12 py-20 md:py-0">
             
             {/* Logo Section */}
-            <div className="flex flex-col items-center gap-4 md:gap-8">
+            <div className="flex flex-col items-center gap-6 md:gap-8">
                  <div className="relative group md:hidden">
                     {/* Mobile Logo Only */}
                     <div className="absolute -inset-1 bg-gradient-to-r from-[#25F4EE] to-[#FE2C55] rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
-                    <div className="relative w-24 h-24 bg-white dark:bg-dark-card rounded-3xl flex items-center justify-center shadow-xl border border-gray-100 dark:border-white/5">
+                    <div className="relative w-20 h-20 bg-white dark:bg-dark-card rounded-3xl flex items-center justify-center shadow-xl border border-gray-100 dark:border-white/5">
                         <div className="relative">
-                            <i className="fa-brands fa-tiktok text-5xl text-gray-900 dark:text-white"></i>
-                            <div className="absolute -bottom-2 -right-2 bg-primary text-white w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border-2 border-white dark:border-dark-card">
-                                <i className="fas fa-arrow-down text-sm"></i>
+                            <i className="fa-brands fa-tiktok text-4xl text-gray-900 dark:text-white"></i>
+                            <div className="absolute -bottom-2 -right-2 bg-primary text-white w-7 h-7 rounded-xl flex items-center justify-center shadow-lg border-2 border-white dark:border-dark-card">
+                                <i className="fas fa-arrow-down text-xs"></i>
                             </div>
                         </div>
                     </div>
                  </div>
                  
-                 {/* Desktop Large Logo */}
+                 {/* Desktop Large Logo - unchanged */}
                  <div className="hidden md:block relative group mb-4">
                      <i className="fa-brands fa-tiktok text-[120px] text-gray-900 dark:text-white opacity-90 drop-shadow-2xl"></i>
                      <div className="absolute bottom-0 right-0 bg-gradient-to-br from-primary to-orange-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border-4 border-light-bg dark:border-dark-bg transform translate-x-1/4 translate-y-1/4">
@@ -447,7 +449,7 @@ const App = () => {
                     <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter">
                         Tik<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[#FE2C55]">Save</span>
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm md:text-xl font-medium max-w-md mx-auto">
+                    <p className="text-gray-500 dark:text-gray-400 text-sm md:text-xl font-medium max-w-md mx-auto px-4 leading-relaxed">
                         Paste a TikTok link below to download video MP4 or audio MP3 instantly.
                     </p>
                 </div>
@@ -463,8 +465,8 @@ const App = () => {
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleProcess()}
-                    placeholder="Paste TikTok link here"
-                    className="w-full pl-12 pr-24 md:pl-16 md:pr-32 py-5 md:py-6 rounded-2xl md:rounded-3xl bg-white dark:bg-dark-card text-gray-800 dark:text-gray-100 placeholder-gray-400 shadow-soft md:shadow-2xl md:shadow-black/5 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-gray-100 dark:border-white/5 focus:border-primary/50 text-lg md:text-xl"
+                    placeholder="Paste link here" 
+                    className="w-full pl-12 pr-16 md:pl-16 md:pr-32 py-5 md:py-6 rounded-2xl md:rounded-3xl bg-white dark:bg-dark-card text-gray-800 dark:text-gray-100 placeholder-gray-400 shadow-soft md:shadow-2xl md:shadow-black/5 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-gray-100 dark:border-white/5 focus:border-primary/50 text-lg md:text-xl"
                 />
                 <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {url && (
@@ -472,23 +474,36 @@ const App = () => {
                             <i className="fas fa-times-circle"></i>
                         </button>
                     )}
-                    {!url && (
-                        <button onClick={handlePaste} className="px-4 py-2 bg-gray-100 dark:bg-gray-700 text-xs font-semibold rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-200 transition-colors hidden sm:block">
-                            Paste
-                        </button>
-                    )}
                     <button 
                         onClick={() => handleProcess()} 
                         disabled={isLoading}
                         className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform disabled:opacity-70 hover:bg-orange-600"
                     >
-                        {isLoading ? <div className="loader w-5 h-5 border-2"></div> : <i className="fas fa-arrow-right md:text-xl"></i>}
+                        {isLoading ? <div className="loader w-5 h-5 border-2"></div> : <i className="fas fa-download md:text-xl"></i>}
                     </button>
                 </div>
             </div>
             
             {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/10 py-2 px-4 rounded-lg inline-block animate-fade-in border border-red-100 dark:border-red-900/20"><i className="fas fa-exclamation-triangle mr-2"></i>{error}</p>}
         </div>
+
+        {/* Mobile History (Bottom Strip) */}
+        {history.length > 0 && (
+            <div className="md:hidden pb-4 px-2 w-full max-w-lg mx-auto">
+                 <div className="flex justify-between items-center mb-3 px-2">
+                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recent</h3>
+                    <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-md">CLEAR</button>
+                </div>
+                <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar mask-linear-fade px-2">
+                    {history.map((h, i) => renderHistoryItem(h, i, false))}
+                </div>
+            </div>
+        )}
+
+        {/* Footer */}
+        <footer className="py-6 text-center text-gray-400 dark:text-gray-600 text-xs font-medium">
+             Build with 🤍 by andikatuluspgstu
+        </footer>
       </div>
 
       {/* History Side Panel (Desktop) */}
@@ -502,19 +517,6 @@ const App = () => {
                   {history.map((h, i) => renderHistoryItem(h, i, true))}
               </div>
           </div>
-      )}
-
-      {/* Mobile History (Bottom Strip) */}
-      {history.length > 0 && (
-        <div className="md:hidden pb-8 px-6 w-full max-w-lg mx-auto mt-auto">
-             <div className="flex justify-between items-center mb-3">
-                <h3 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Recent History</h3>
-                <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-xs text-primary hover:text-orange-600 transition-colors">Clear</button>
-            </div>
-            <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar mask-linear-fade">
-                {history.map((h, i) => renderHistoryItem(h, i, false))}
-            </div>
-        </div>
       )}
     </div>
   );
