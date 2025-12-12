@@ -219,29 +219,33 @@ const App = () => {
     // Use a clean filename with label
     const cleanTitle = (result.title || 'video').replace(/[^a-z0-9]/gi, '_').substring(0, 50);
     const filename = `tiksave_${result.id}_${cleanTitle}_${label}.${ext}`;
-    const mimeType = type === 'video' ? 'video/mp4' : 'audio/mpeg';
+    
+    // Force application/octet-stream to ensure the browser downloads the file 
+    // instead of playing it in a new tab/player.
+    const mimeType = 'application/octet-stream';
     
     try {
       let blob: Blob | null = null;
       
-      // Defined strategies to attempt sequential downloading
+      // Defined strategies to attempt sequential downloading.
+      // Proxies are prioritized because direct fetch almost always fails due to CORS.
       const strategies = [
-          // 1. Direct Fetch with no-referrer
-          async () => {
-              const res = await fetch(fileUrl, { referrerPolicy: 'no-referrer' });
-              if (!res.ok) throw new Error('Direct fetch failed');
-              return await res.blob();
-          },
-          // 2. CorsProxy.io
+          // 1. CorsProxy.io (Usually fastest)
           async () => {
                const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(fileUrl)}`);
                if (!res.ok) throw new Error('CorsProxy failed');
                return await res.blob();
           },
-          // 3. CodeTabs Proxy
+          // 2. CodeTabs Proxy (Good backup)
           async () => {
               const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fileUrl)}`);
                if (!res.ok) throw new Error('CodeTabs failed');
+               return await res.blob();
+          },
+          // 3. ThingProxy (Another backup)
+          async () => {
+              const res = await fetch(`https://thingproxy.freeboard.io/fetch/${fileUrl}`);
+               if (!res.ok) throw new Error('ThingProxy failed');
                return await res.blob();
           },
           // 4. AllOrigins (Raw)
@@ -249,6 +253,12 @@ const App = () => {
                const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`);
                if (!res.ok) throw new Error('AllOrigins failed');
                return await res.blob();
+          },
+          // 5. Direct Fetch (Last resort - mostly for debugging or if CDN allows)
+          async () => {
+              const res = await fetch(fileUrl, { referrerPolicy: 'no-referrer', credentials: 'omit' });
+              if (!res.ok) throw new Error('Direct fetch failed');
+              return await res.blob();
           }
       ];
 
@@ -278,7 +288,7 @@ const App = () => {
       
     } catch (e) {
       console.error("Download failed", e);
-      setError("Download failed. The server might be blocking requests.");
+      setError("Download failed. The server might be blocking requests. Please try again in a few moments.");
     } finally {
       setIsDownloading(false);
     }
