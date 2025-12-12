@@ -388,69 +388,63 @@ const App = () => {
   );
 
   const renderHome = () => (
-    <div className="animate-fade-in relative min-h-screen flex flex-col md:flex-row md:items-start">
+    <div className="animate-fade-in relative h-screen w-full flex flex-col md:flex-row md:items-start overflow-hidden">
       {/* Header Mobile - Settings Icon */}
-      <header className="md:hidden px-6 py-6 flex justify-between items-center absolute top-0 left-0 right-0 z-20 pointer-events-none">
+      <header className="md:hidden px-6 py-6 flex justify-end items-center absolute top-0 left-0 right-0 z-20 pointer-events-none">
         <button onClick={() => setShowSettings(true)} className="pointer-events-auto w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm transition-transform active:scale-95 hover:bg-gray-50 dark:hover:bg-gray-800">
             <i className="fas fa-cog"></i>
         </button>
       </header>
       
-      {/* Header Desktop */}
-      <header className="hidden md:flex px-8 py-6 justify-between items-center fixed top-0 left-0 right-0 z-50 pointer-events-none w-full max-w-[1920px] mx-auto">
-         <div className="flex items-center gap-2 pointer-events-auto">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white shadow-glow">
-                <i className="fas fa-arrow-down text-lg"></i>
-            </div>
-            <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Tik<span className="text-primary">Save</span></span>
-         </div>
+      {/* Header Desktop - LOGO REMOVED */}
+      <header className="hidden md:flex px-8 py-6 justify-end items-center fixed top-0 left-0 right-0 z-50 pointer-events-none w-full max-w-[1920px] mx-auto">
          <button onClick={() => setShowSettings(true)} className="pointer-events-auto w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
             <i className="fas fa-cog"></i>
          </button>
       </header>
 
       {/* Main Content Area (Input) */}
-      <div className={`flex-1 flex flex-col min-h-screen px-6 md:px-0 relative z-10 w-full transition-all duration-300 ${history.length > 0 ? 'md:mr-80 lg:mr-96' : ''}`}>
+      <div className={`flex-1 flex flex-col h-screen px-6 md:px-0 relative z-10 w-full transition-all duration-300 ${history.length > 0 ? 'md:mr-80 lg:mr-96' : ''}`}>
         
-        {/* Vertical Spacer for Mobile Centering */}
-        <div className="flex-1 flex flex-col justify-center w-full max-w-lg md:max-w-2xl mx-auto text-center space-y-8 md:space-y-12 py-20 md:py-0">
+        {/* Centered Content Wrapper */}
+        <div className="flex-1 flex flex-col justify-center items-center w-full max-w-lg md:max-w-2xl mx-auto text-center space-y-6 md:space-y-10">
             
             {/* Logo Section */}
-            <div className="flex flex-col items-center gap-6 md:gap-8">
-                 <div className="relative group md:hidden">
-                    {/* Mobile Logo Only */}
+            <div className="flex flex-col items-center gap-4 md:gap-6">
+                 {/* Mobile Logo Only */}
+                 <div className="relative group md:hidden scale-90">
                     <div className="absolute -inset-1 bg-gradient-to-r from-[#25F4EE] to-[#FE2C55] rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
-                    <div className="relative w-20 h-20 bg-white dark:bg-dark-card rounded-3xl flex items-center justify-center shadow-xl border border-gray-100 dark:border-white/5">
+                    <div className="relative w-16 h-16 bg-white dark:bg-dark-card rounded-3xl flex items-center justify-center shadow-xl border border-gray-100 dark:border-white/5">
                         <div className="relative">
-                            <i className="fa-brands fa-tiktok text-4xl text-gray-900 dark:text-white"></i>
-                            <div className="absolute -bottom-2 -right-2 bg-primary text-white w-7 h-7 rounded-xl flex items-center justify-center shadow-lg border-2 border-white dark:border-dark-card">
-                                <i className="fas fa-arrow-down text-xs"></i>
+                            <i className="fa-brands fa-tiktok text-3xl text-gray-900 dark:text-white"></i>
+                            <div className="absolute -bottom-2 -right-2 bg-primary text-white w-6 h-6 rounded-xl flex items-center justify-center shadow-lg border-2 border-white dark:border-dark-card">
+                                <i className="fas fa-arrow-down text-[10px]"></i>
                             </div>
                         </div>
                     </div>
                  </div>
                  
-                 {/* Desktop Large Logo - unchanged */}
-                 <div className="hidden md:block relative group mb-4">
-                     <i className="fa-brands fa-tiktok text-[120px] text-gray-900 dark:text-white opacity-90 drop-shadow-2xl"></i>
-                     <div className="absolute bottom-0 right-0 bg-gradient-to-br from-primary to-orange-600 text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg border-4 border-light-bg dark:border-dark-bg transform translate-x-1/4 translate-y-1/4">
-                        <i className="fas fa-arrow-down text-xl"></i>
+                 {/* Desktop Large Logo */}
+                 <div className="hidden md:block relative group mb-2">
+                     <i className="fa-brands fa-tiktok text-8xl text-gray-900 dark:text-white opacity-90 drop-shadow-2xl"></i>
+                     <div className="absolute bottom-0 right-0 bg-gradient-to-br from-primary to-orange-600 text-white w-10 h-10 rounded-2xl flex items-center justify-center shadow-lg border-4 border-light-bg dark:border-dark-bg transform translate-x-1/4 translate-y-1/4">
+                        <i className="fas fa-arrow-down text-lg"></i>
                      </div>
                  </div>
 
-                <div className="space-y-3">
-                    <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter">
+                <div className="space-y-2">
+                    <h1 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tighter">
                         Tik<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[#FE2C55]">Save</span>
                     </h1>
-                    <p className="text-gray-500 dark:text-gray-400 text-sm md:text-xl font-medium max-w-md mx-auto px-4 leading-relaxed">
-                        Paste a TikTok link below to download video MP4 or audio MP3 instantly.
+                    <p className="text-gray-500 dark:text-gray-400 text-sm md:text-lg font-medium max-w-md mx-auto px-4 leading-relaxed">
+                        Paste link below to download instantly.
                     </p>
                 </div>
             </div>
 
             {/* Input Area */}
-            <div className="relative group w-full text-left">
-                <div className="absolute inset-y-0 left-4 md:left-6 flex items-center pointer-events-none text-gray-400">
+            <div className="relative group w-full text-left max-w-md md:max-w-xl mx-auto">
+                <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-gray-400">
                     <i className="fas fa-link text-lg"></i>
                 </div>
                 <input 
@@ -459,9 +453,9 @@ const App = () => {
                     onChange={(e) => setUrl(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && handleProcess()}
                     placeholder="Paste link here" 
-                    className="w-full pl-12 pr-16 md:pl-16 md:pr-32 py-5 md:py-6 rounded-2xl md:rounded-3xl bg-white dark:bg-dark-card text-gray-800 dark:text-gray-100 placeholder-gray-400 shadow-soft md:shadow-2xl md:shadow-black/5 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-gray-100 dark:border-white/5 focus:border-primary/50 text-lg md:text-xl"
+                    className="w-full pl-12 pr-14 py-4 md:py-5 rounded-2xl bg-white dark:bg-dark-card text-gray-800 dark:text-gray-100 placeholder-gray-400 shadow-soft md:shadow-2xl md:shadow-black/5 focus:outline-none focus:ring-4 focus:ring-primary/10 transition-all border border-gray-100 dark:border-white/5 focus:border-primary/50 text-base md:text-lg"
                 />
-                <div className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {url && (
                         <button onClick={() => setUrl('')} className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                             <i className="fas fa-times-circle"></i>
@@ -470,43 +464,43 @@ const App = () => {
                     <button 
                         onClick={() => handleProcess()} 
                         disabled={isLoading}
-                        className="w-12 h-12 md:w-14 md:h-14 rounded-xl md:rounded-2xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform disabled:opacity-70 hover:bg-orange-600"
+                        className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 active:scale-95 transition-transform disabled:opacity-70 hover:bg-orange-600"
                     >
-                        {isLoading ? <div className="loader w-5 h-5 border-2"></div> : <i className="fas fa-download md:text-xl"></i>}
+                        {isLoading ? <div className="loader w-4 h-4 border-2"></div> : <i className="fas fa-download text-sm md:text-base"></i>}
                     </button>
                 </div>
             </div>
             
-            {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/10 py-2 px-4 rounded-lg inline-block animate-fade-in border border-red-100 dark:border-red-900/20"><i className="fas fa-exclamation-triangle mr-2"></i>{error}</p>}
+            {error && <p className="text-red-500 text-xs md:text-sm bg-red-50 dark:bg-red-900/10 py-1.5 px-3 rounded-lg inline-block animate-fade-in border border-red-100 dark:border-red-900/20"><i className="fas fa-exclamation-triangle mr-2"></i>{error}</p>}
         </div>
 
-        {/* Mobile History (Bottom Strip) */}
+        {/* Mobile History (Compact Bottom Strip) */}
         {history.length > 0 && (
-            <div className="md:hidden pb-4 px-2 w-full max-w-lg mx-auto">
-                 <div className="flex justify-between items-center mb-3 px-2">
-                    <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest">Recent</h3>
-                    <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors bg-orange-50 dark:bg-orange-900/20 px-2 py-1 rounded-md">CLEAR</button>
+            <div className="md:hidden pb-6 px-4 w-full max-w-lg mx-auto shrink-0 z-20 relative">
+                 <div className="flex justify-between items-center mb-2 px-1">
+                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recent</h3>
+                    <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md">CLEAR</button>
                 </div>
-                <div className="flex overflow-x-auto gap-3 pb-2 no-scrollbar mask-linear-fade px-2">
+                <div className="flex overflow-x-auto gap-3 pb-1 no-scrollbar mask-linear-fade px-1">
                     {history.map((h, i) => renderHistoryItem(h, i, false))}
                 </div>
             </div>
         )}
 
-        {/* Footer */}
-        <footer className="py-6 text-center text-gray-400 dark:text-gray-600 text-xs font-medium">
+        {/* Footer (Compact) */}
+        <footer className="pb-4 pt-2 text-center text-gray-400 dark:text-gray-600 text-[10px] font-medium shrink-0">
              Build with 🤍 by andikatuluspgstu
         </footer>
       </div>
 
       {/* History Side Panel (Desktop) */}
       {history.length > 0 && (
-          <div className="hidden md:flex flex-col w-80 lg:w-96 h-screen fixed right-0 top-0 bg-white dark:bg-dark-card border-l border-gray-100 dark:border-white/5 overflow-hidden z-40 shadow-2xl shadow-black/5 pt-24">
-              <div className="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Downloads</h3>
-                  <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-xs text-primary hover:text-orange-600 transition-colors px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-900/10">Clear All</button>
+          <div className="hidden md:flex flex-col w-72 lg:w-80 h-screen fixed right-0 top-0 bg-white dark:bg-dark-card border-l border-gray-100 dark:border-white/5 overflow-hidden z-40 shadow-2xl shadow-black/5 pt-20">
+              <div className="px-5 py-3 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm shrink-0">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Recent Downloads</h3>
+                  <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors px-2 py-1 rounded-full bg-orange-50 dark:bg-orange-900/10">Clear All</button>
               </div>
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+              <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
                   {history.map((h, i) => renderHistoryItem(h, i, true))}
               </div>
           </div>
@@ -516,27 +510,27 @@ const App = () => {
 
   const renderDownload = () => {
       if (!result) return (
-          <div className="flex flex-col items-center justify-center min-h-screen px-8 text-center animate-fade-in">
+          <div className="flex flex-col items-center justify-center h-screen px-8 text-center animate-fade-in overflow-hidden">
               <button onClick={() => setActiveTab('home')} className="mb-8 px-6 py-3 bg-gray-100 dark:bg-dark-card rounded-full text-sm font-semibold">Back to Home</button>
           </div>
       );
 
       return (
-        <div className="animate-slide-up min-h-screen flex flex-col md:flex-row bg-light-bg dark:bg-dark-bg">
+        <div className="animate-slide-up h-screen w-full flex flex-col md:flex-row bg-light-bg dark:bg-dark-bg overflow-hidden">
             {/* Desktop: Left Side (Video Player) */}
-            <div className="md:w-1/2 lg:w-7/12 md:bg-black md:h-screen md:sticky md:top-0 flex items-center justify-center relative group">
-                <header className="md:hidden px-5 py-6 flex items-center gap-4 sticky top-0 z-20 bg-light-bg/90 dark:bg-dark-bg/90 backdrop-blur-md w-full">
-                    <button onClick={() => setActiveTab('home')} className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-white bg-white dark:bg-dark-card rounded-full shadow-sm border border-light-border dark:border-dark-border hover:bg-gray-50">
-                        <i className="fas fa-arrow-left"></i>
+            <div className="md:w-1/2 lg:w-7/12 md:bg-black h-[40vh] md:h-screen relative group shrink-0">
+                <header className="md:hidden px-4 py-4 flex items-center gap-4 absolute top-0 z-20 w-full bg-gradient-to-b from-black/60 to-transparent">
+                    <button onClick={() => setActiveTab('home')} className="w-8 h-8 flex items-center justify-center text-white bg-white/20 backdrop-blur-md rounded-full">
+                        <i className="fas fa-arrow-left text-sm"></i>
                     </button>
-                    <h1 className="text-xl font-bold text-gray-900 dark:text-white">Download</h1>
+                    <h1 className="text-lg font-bold text-white shadow-black drop-shadow-md">Download</h1>
                 </header>
                 
                 <button onClick={() => setActiveTab('home')} className="hidden md:flex absolute top-8 left-8 w-12 h-12 items-center justify-center text-white bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full z-20 transition-colors">
                     <i className="fas fa-arrow-left"></i>
                 </button>
 
-                <div className="w-full md:max-w-2xl md:aspect-[9/16] aspect-[9/16] max-h-[60vh] md:max-h-[90vh] overflow-hidden bg-black shadow-lg mx-auto md:mx-0 relative">
+                <div className="w-full h-full bg-black flex items-center justify-center">
                      <video 
                         src={result.playUrl} 
                         poster={result.cover} 
@@ -547,18 +541,18 @@ const App = () => {
             </div>
 
             {/* Desktop: Right Side (Details & Controls) */}
-            <div className="flex-1 md:h-screen md:overflow-y-auto bg-white dark:bg-dark-card md:border-l border-gray-100 dark:border-white/5">
-                <div className="px-5 mt-4 md:mt-0 md:p-16 max-w-lg mx-auto md:max-w-xl md:h-full md:flex md:flex-col md:justify-center">
+            <div className="flex-1 h-[60vh] md:h-screen overflow-y-auto no-scrollbar bg-white dark:bg-dark-card md:border-l border-gray-100 dark:border-white/5">
+                <div className="px-5 py-6 md:p-16 max-w-lg mx-auto md:max-w-xl md:h-full md:flex md:flex-col md:justify-center">
                     
                     {/* Mobile Preview Card */}
-                    <div className="bg-white dark:bg-dark-card p-4 md:p-0 md:bg-transparent md:dark:bg-transparent md:shadow-none rounded-2xl shadow-soft border border-light-border dark:border-dark-border md:border-none mb-6 flex gap-4 items-center md:hidden">
-                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative">
+                    <div className="flex gap-4 items-center md:hidden mb-6">
+                        <div className="w-16 h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative">
                             <img src={result.cover} className="w-full h-full object-cover" />
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-bold text-gray-900 dark:text-white line-clamp-2 text-base mb-1">{result.title || "TikTok Video"}</h3>
-                            <div className="flex items-center gap-2 mb-2">
-                                <img src={result.author.avatar} className="w-5 h-5 rounded-full" />
+                            <h3 className="font-bold text-gray-900 dark:text-white line-clamp-1 text-sm mb-1">{result.title || "TikTok Video"}</h3>
+                            <div className="flex items-center gap-2">
+                                <img src={result.author.avatar} className="w-4 h-4 rounded-full" />
                                 <span className="text-xs text-gray-500 truncate">@{result.author.nickname}</span>
                             </div>
                         </div>
@@ -586,11 +580,11 @@ const App = () => {
                         <button 
                             onClick={() => handleDownload('video')}
                             disabled={isDownloading}
-                            className="w-full py-5 bg-primary hover:bg-orange-600 text-white font-bold rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg"
+                            className="w-full py-4 md:py-5 bg-primary hover:bg-orange-600 text-white font-bold rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-base md:text-lg"
                         >
                             {isDownloading ? (
                                 <>
-                                    <div className="loader w-6 h-6 border-2"></div>
+                                    <div className="loader w-5 h-5 border-2"></div>
                                     <span>Downloading...</span>
                                 </>
                             ) : (
@@ -605,7 +599,7 @@ const App = () => {
                             <button 
                                 onClick={() => handleDownload('audio')}
                                 disabled={isDownloading}
-                                className="w-full py-5 bg-white dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 hover:border-primary dark:hover:border-primary text-gray-700 dark:text-white font-bold rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg"
+                                className="w-full py-4 md:py-5 bg-white dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 hover:border-primary dark:hover:border-primary text-gray-700 dark:text-white font-bold rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-base md:text-lg"
                             >
                                 <i className="fas fa-music text-gray-400 dark:text-gray-500"></i>
                                 <span>Download Audio</span>
@@ -619,8 +613,8 @@ const App = () => {
   }
 
   return (
-    <div className="min-h-screen font-sans selection:bg-primary selection:text-white transition-colors duration-300 bg-light-bg dark:bg-dark-bg text-gray-900 dark:text-white">
-        <main className="w-full mx-auto min-h-screen relative overflow-hidden transition-all duration-300">
+    <div className="h-screen overflow-hidden font-sans selection:bg-primary selection:text-white transition-colors duration-300 bg-light-bg dark:bg-dark-bg text-gray-900 dark:text-white">
+        <main className="w-full mx-auto h-screen relative overflow-hidden transition-all duration-300">
             {renderSettings()}
             {activeTab === 'home' && renderHome()}
             {activeTab === 'download' && renderDownload()}
