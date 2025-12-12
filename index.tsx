@@ -38,6 +38,7 @@ const App = () => {
   
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
+  const [settingsView, setSettingsView] = useState<'general' | 'about'>('general');
   const [autoDownload, setAutoDownload] = useState(false);
   
   // Selection state for download page
@@ -45,10 +46,39 @@ const App = () => {
 
   // --- Helpers ---
   const extractUrl = (text: string): string | null => {
-    // Robust regex to capture tiktok URLs hidden in text
     const match = text.match(/https?:\/\/(?:www\.|vm\.|vt\.|m\.|t\.)?tiktok\.com\/[^\s]+/);
     if (!match) return null;
     return match[0].replace(/[.,;!?)]+$/, "");
+  };
+
+  const validateUrl = (input: string): { isValid: boolean; cleanUrl: string | null; error?: string } => {
+    if (!input || !input.trim()) {
+        return { isValid: false, cleanUrl: null, error: "Please paste a TikTok link." };
+    }
+    
+    // Check domain
+    if (!input.includes("tiktok.com")) {
+         return { isValid: false, cleanUrl: null, error: "That doesn't look like a valid TikTok link." };
+    }
+
+    const cleanUrl = extractUrl(input);
+    if (!cleanUrl) {
+         return { isValid: false, cleanUrl: null, error: "Could not find a valid URL in the text." };
+    }
+
+    // Specific Checks
+    const isShortLink = /v[tm]\.tiktok\.com/.test(cleanUrl);
+    const isMobileLink = /m\.tiktok\.com/.test(cleanUrl);
+    const isStandardLink = /tiktok\.com\/@[\w.-]+\/video\/\d+/.test(cleanUrl);
+    
+    if (!isShortLink && !isMobileLink && !isStandardLink) {
+         if (cleanUrl.includes("/@") && !cleanUrl.includes("/video/")) {
+             return { isValid: false, cleanUrl: null, error: "This looks like a profile link. Please provide a video link." };
+         }
+         // If we are unsure, we let it pass but it might fail at API level
+    }
+    
+    return { isValid: true, cleanUrl };
   };
 
   // --- Effects ---
@@ -73,8 +103,8 @@ const App = () => {
     const params = new URLSearchParams(window.location.search);
     const sharedText = params.get('text') || params.get('url');
     if (sharedText) {
-        const cleanUrl = extractUrl(sharedText);
-        if (cleanUrl) {
+        const { isValid, cleanUrl } = validateUrl(sharedText);
+        if (isValid && cleanUrl) {
             setUrl(cleanUrl);
             setTimeout(() => handleProcess(cleanUrl), 100);
             window.history.replaceState({}, document.title, "/");
@@ -98,10 +128,11 @@ const App = () => {
   // --- Handlers ---
   const handleProcess = async (inputUrl: string = url) => {
     setError(null);
-    const cleanUrl = extractUrl(inputUrl);
+    
+    const { isValid, cleanUrl, error: validationError } = validateUrl(inputUrl);
 
-    if (!cleanUrl) {
-      setError("Please paste a valid TikTok link.");
+    if (!isValid || !cleanUrl) {
+      setError(validationError || "Invalid URL");
       return;
     }
     
@@ -137,8 +168,10 @@ const App = () => {
         }
       } else {
         const msg = data.msg || "Failed to fetch video.";
-        if (msg.includes("parsing")) {
-            setError("Could not parse this video. Ensure the link is public.");
+        if (msg.toLowerCase().includes("private")) {
+            setError("This video appears to be private or deleted.");
+        } else if (msg.includes("parsing")) {
+            setError("Could not process this video. It might be region-restricted.");
         } else {
             setError(msg);
         }
@@ -159,7 +192,6 @@ const App = () => {
   };
 
   const downloadBlob = async (blob: Blob, filename: string, useSystemPicker: boolean = false) => {
-      // Try Native File System API if requested and supported
       if (useSystemPicker && 'showSaveFilePicker' in window) {
           try {
               const opts = {
@@ -175,12 +207,11 @@ const App = () => {
               await writable.close();
               return true;
           } catch (err: any) {
-              if (err.name === 'AbortError') return false; // User cancelled
+              if (err.name === 'AbortError') return false; 
               console.warn("File picker failed, falling back", err);
           }
       }
 
-      // Fallback to standard download
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = blobUrl;
@@ -208,15 +239,11 @@ const App = () => {
     
     try {
       let blob: Blob | null = null;
-
-      // Attempt 1: Direct Fetch
       try {
           const response = await fetch(fileUrl);
           if (!response.ok) throw new Error("Direct fetch failed");
           blob = await response.blob();
       } catch (directError) {
-          console.warn("Direct fetch failed, trying proxy...", directError);
-          // Attempt 2: CORS Proxy
           try {
              const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fileUrl)}`;
              const response = await fetch(proxyUrl);
@@ -228,14 +255,12 @@ const App = () => {
       }
 
       if (blob) {
-          // Ensure blob has correct type for file picker
           const finalBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
           await downloadBlob(finalBlob, filename, saveToDevice);
       }
       
     } catch (e) {
       console.error("Download failed", e);
-      // Fallback: Open in new tab if blob fetch fails entirely
       const link = document.createElement('a');
       link.href = fileUrl;
       link.download = filename;
@@ -263,52 +288,86 @@ const App = () => {
 
   const renderSettings = () => (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${showSettings ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowSettings(false)}></div>
+        <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { setShowSettings(false); setSettingsView('general'); }}></div>
         <div className={`bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl p-6 shadow-2xl transform transition-transform duration-200 ${showSettings ? 'scale-100' : 'scale-95'}`}>
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">Settings</h2>
-                <button onClick={() => setShowSettings(false)} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500">
+                <div className="flex gap-4">
+                    <button 
+                        onClick={() => setSettingsView('general')}
+                        className={`text-lg font-bold transition-colors ${settingsView === 'general' ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}
+                    >
+                        Settings
+                    </button>
+                    <button 
+                        onClick={() => setSettingsView('about')}
+                        className={`text-lg font-bold transition-colors ${settingsView === 'about' ? 'text-gray-900 dark:text-white' : 'text-gray-400'}`}
+                    >
+                        About
+                    </button>
+                </div>
+                <button onClick={() => { setShowSettings(false); setSettingsView('general'); }} className="w-8 h-8 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center text-gray-500">
                     <i className="fas fa-times"></i>
                 </button>
             </div>
             
-            <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-bg rounded-xl">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
-                            <i className="fas fa-bolt"></i>
+            {settingsView === 'general' ? (
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                                <i className="fas fa-bolt"></i>
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-800 dark:text-white">Auto Download</p>
+                                <p className="text-xs text-gray-500">Download immediately after search</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-semibold text-gray-800 dark:text-white">Auto Download</p>
-                            <p className="text-xs text-gray-500">Download immediately after search</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={autoDownload} onChange={(e) => setAutoDownload(e.target.checked)} className="sr-only peer" />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                        </label>
                     </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={autoDownload} onChange={(e) => setAutoDownload(e.target.checked)} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                    </label>
-                </div>
 
-                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-bg rounded-xl">
-                    <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                            <i className="fas fa-moon"></i>
+                    <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-dark-bg rounded-xl">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+                                <i className="fas fa-moon"></i>
+                            </div>
+                            <div>
+                                <p className="font-semibold text-gray-800 dark:text-white">Dark Mode</p>
+                                <p className="text-xs text-gray-500">Easier on the eyes</p>
+                            </div>
                         </div>
-                        <div>
-                            <p className="font-semibold text-gray-800 dark:text-white">Dark Mode</p>
-                            <p className="text-xs text-gray-500">Easier on the eyes</p>
-                        </div>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked={theme === 'dark'} onChange={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="sr-only peer" />
+                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                        </label>
                     </div>
-                     <label className="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked={theme === 'dark'} onChange={() => setTheme(t => t === 'light' ? 'dark' : 'light')} className="sr-only peer" />
-                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
-                    </label>
                 </div>
-            </div>
-            
-            <div className="mt-8 text-center">
-                <p className="text-xs text-gray-400">Version 1.1.0 • TikSave</p>
-            </div>
+            ) : (
+                 <div className="space-y-6 text-center py-4">
+                    <div className="flex justify-center">
+                         <div className="w-20 h-20 rounded-2xl bg-gradient-to-tr from-[#25F4EE] to-[#FE2C55] p-0.5">
+                            <div className="w-full h-full bg-white dark:bg-dark-card rounded-2xl flex items-center justify-center">
+                                 <i className="fa-brands fa-tiktok text-4xl text-gray-800 dark:text-white"></i>
+                            </div>
+                         </div>
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-1">TikSave</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Video Downloader & Saver</p>
+                    </div>
+                    <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
+                        <p>Version 1.2.0 (Build 2024)</p>
+                        <p>TikSave helps you save your favorite moments without watermarks. Fast, free, and secure.</p>
+                    </div>
+                    <div className="pt-4 border-t border-gray-100 dark:border-white/5">
+                        <a href="#" className="text-primary hover:text-orange-600 text-sm font-medium">Privacy Policy</a>
+                        <span className="mx-2 text-gray-300">•</span>
+                        <a href="#" className="text-primary hover:text-orange-600 text-sm font-medium">Terms of Service</a>
+                    </div>
+                 </div>
+            )}
         </div>
     </div>
   );
@@ -335,26 +394,38 @@ const App = () => {
 
   const renderHome = () => (
     <div className="animate-fade-in relative h-full flex flex-col md:flex-row md:items-stretch">
-      {/* Header - Settings Icon */}
       <header className="px-6 py-6 flex justify-between items-center absolute top-0 left-0 right-0 z-20 pointer-events-none">
         <button onClick={() => setShowSettings(true)} className="pointer-events-auto w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm transition-transform active:scale-95 hover:bg-gray-50 dark:hover:bg-gray-800">
             <i className="fas fa-cog"></i>
         </button>
       </header>
 
-      {/* Left/Main Content */}
       <div className="flex-1 flex flex-col justify-center px-6 md:px-12 md:border-r md:border-gray-100 md:dark:border-white/5 relative z-10">
         <div className="w-full max-w-lg mx-auto text-center space-y-8 md:space-y-10">
             
-            {/* Logo Section */}
-            <div className="flex flex-col items-center gap-3">
-                 <div className="w-20 h-20 md:w-24 md:h-24 rounded-2xl bg-gradient-to-br from-primary to-orange-600 flex items-center justify-center text-white shadow-glow mb-2 transform hover:scale-105 transition-transform duration-300">
-                    <i className="fas fa-arrow-down text-3xl md:text-4xl"></i>
+            {/* New Logo Branding */}
+            <div className="flex flex-col items-center gap-4">
+                 <div className="relative group">
+                    {/* Glow Effect */}
+                    <div className="absolute -inset-1 bg-gradient-to-r from-[#25F4EE] to-[#FE2C55] rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-500"></div>
+                    <div className="relative w-24 h-24 md:w-28 md:h-28 bg-white dark:bg-dark-card rounded-3xl flex items-center justify-center shadow-xl border border-gray-100 dark:border-white/5">
+                        <div className="relative">
+                            <i className="fa-brands fa-tiktok text-5xl md:text-6xl text-gray-900 dark:text-white"></i>
+                            <div className="absolute -bottom-2 -right-2 bg-primary text-white w-8 h-8 rounded-xl flex items-center justify-center shadow-lg border-2 border-white dark:border-dark-card transform group-hover:scale-110 transition-transform">
+                                <i className="fas fa-arrow-down text-sm"></i>
+                            </div>
+                        </div>
+                    </div>
+                 </div>
+                 
+                <div className="space-y-2">
+                    <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tighter">
+                        Tik<span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-[#FE2C55]">Save</span>
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 text-sm md:text-lg font-medium">
+                        No Watermark. Unlimited Downloads.
+                    </p>
                 </div>
-                <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white tracking-tight">
-                    Tik<span className="text-primary">Save</span>
-                </h1>
-                <p className="text-gray-500 dark:text-gray-400 text-sm md:text-base">Download TikTok videos without watermark</p>
             </div>
 
             {/* Input Area */}
@@ -395,7 +466,6 @@ const App = () => {
         </div>
       </div>
 
-      {/* Right Column (Desktop History) */}
       {history.length > 0 && (
           <div className="hidden md:flex flex-col w-96 bg-gray-50 dark:bg-black/20 overflow-y-auto border-l border-gray-100 dark:border-white/5">
               <div className="p-6">
@@ -410,7 +480,6 @@ const App = () => {
           </div>
       )}
 
-      {/* Mobile History (Bottom Strip) */}
       {history.length > 0 && (
         <div className="md:hidden pb-8 px-6 w-full max-w-lg mx-auto mt-auto">
              <div className="flex justify-between items-center mb-3">
@@ -434,9 +503,7 @@ const App = () => {
 
       return (
         <div className="animate-slide-up h-full flex flex-col md:flex-row bg-light-bg dark:bg-dark-bg md:overflow-hidden">
-            {/* Desktop: Left Side (Video Player) */}
             <div className="md:w-1/2 md:bg-black md:flex md:items-center md:justify-center relative group">
-                {/* Mobile Header */}
                 <header className="md:hidden px-5 py-6 flex items-center gap-4 sticky top-0 z-20 bg-light-bg/90 dark:bg-dark-bg/90 backdrop-blur-md">
                     <button onClick={() => setActiveTab('home')} className="w-10 h-10 flex items-center justify-center text-gray-600 dark:text-white bg-white dark:bg-dark-card rounded-full shadow-sm border border-light-border dark:border-dark-border hover:bg-gray-50">
                         <i className="fas fa-arrow-left"></i>
@@ -444,12 +511,10 @@ const App = () => {
                     <h1 className="text-xl font-bold text-gray-900 dark:text-white">Download</h1>
                 </header>
                 
-                {/* Desktop Back Button */}
                 <button onClick={() => setActiveTab('home')} className="hidden md:flex absolute top-6 left-6 w-10 h-10 items-center justify-center text-white bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full z-20 transition-colors">
                     <i className="fas fa-arrow-left"></i>
                 </button>
 
-                {/* Video Container */}
                 <div className="w-full md:max-w-md md:aspect-[9/16] aspect-[9/16] max-h-[50vh] md:max-h-[90vh] md:rounded-2xl overflow-hidden bg-black shadow-lg mx-auto md:mx-0 relative">
                      <video 
                         src={result.playUrl} 
@@ -460,11 +525,9 @@ const App = () => {
                 </div>
             </div>
 
-            {/* Desktop: Right Side (Details & Controls) */}
             <div className="flex-1 md:overflow-y-auto md:bg-white md:dark:bg-dark-card">
                 <div className="px-5 mt-2 md:mt-0 md:p-12 max-w-lg mx-auto md:max-w-none md:h-full md:flex md:flex-col md:justify-center">
                     
-                    {/* Preview Card (Hidden on Desktop Video View, kept for info) */}
                     <div className="bg-white dark:bg-dark-card p-4 md:p-0 md:bg-transparent md:dark:bg-transparent md:shadow-none rounded-2xl shadow-soft border border-light-border dark:border-dark-border md:border-none mb-6 flex gap-4 items-center">
                         <div className="w-20 h-20 md:w-16 md:h-16 rounded-xl overflow-hidden bg-gray-200 shrink-0 relative md:hidden">
                             <img src={result.cover} className="w-full h-full object-cover" />
@@ -476,7 +539,6 @@ const App = () => {
                                 <span className="text-xs md:text-base text-gray-500 truncate">@{result.author.nickname}</span>
                             </div>
                             
-                            {/* Stats */}
                             <div className="flex items-center gap-4 text-xs md:text-sm text-gray-500 dark:text-gray-400">
                                 <span className="flex items-center gap-1"><i className="fas fa-play"></i> {result.stats?.plays || '0'}</span>
                                 <span className="flex items-center gap-1"><i className="fas fa-heart"></i> {result.stats?.likes || '0'}</span>
@@ -486,7 +548,6 @@ const App = () => {
 
                     <div className="w-full h-px bg-gray-100 dark:bg-white/5 my-6 hidden md:block"></div>
 
-                    {/* Format Selection List */}
                     <div className="space-y-3 mb-8">
                         <div 
                             onClick={() => setSelectedFormat('video')}
@@ -525,7 +586,6 @@ const App = () => {
 
                     {error && <p className="text-red-500 text-sm mb-4 text-center bg-red-50 dark:bg-red-900/20 py-2 rounded-lg">{error}</p>}
 
-                    {/* Action Buttons */}
                     <div className="space-y-3 pb-8 md:pb-0">
                         <button 
                             onClick={() => handleDownload(undefined, false)}
