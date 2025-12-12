@@ -30,7 +30,6 @@ const App = () => {
   const [url, setUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VideoData | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -40,9 +39,6 @@ const App = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [settingsView, setSettingsView] = useState<'general' | 'about'>('general');
   const [autoDownload, setAutoDownload] = useState(false);
-  
-  // Selection state for download page
-  const [selectedFormat, setSelectedFormat] = useState<'video' | 'audio'>('video');
 
   // --- Helpers ---
   const extractUrl = (text: string): string | null => {
@@ -163,7 +159,7 @@ const App = () => {
         setActiveTab('download');
 
         if (autoDownload) {
-          setTimeout(() => handleDownload(videoData), 500); 
+          setTimeout(() => handleDownload('video', videoData), 500); 
         }
       } else {
         const msg = data.msg || "Failed to fetch video.";
@@ -190,51 +186,23 @@ const App = () => {
     });
   };
 
-  const downloadBlob = async (blob: Blob, filename: string, useSystemPicker: boolean = false) => {
-      if (useSystemPicker && 'showSaveFilePicker' in window) {
-          try {
-              const opts = {
-                  suggestedName: filename,
-                  types: [{
-                      description: 'Media File',
-                      accept: { [blob.type]: [blob.type === 'audio/mpeg' ? '.mp3' : '.mp4'] },
-                  }],
-              };
-              const handle = await (window as any).showSaveFilePicker(opts);
-              const writable = await handle.createWritable();
-              await writable.write(blob);
-              await writable.close();
-              return true;
-          } catch (err: any) {
-              if (err.name === 'AbortError') return false; 
-              console.warn("File picker failed, falling back", err);
-          }
-      }
-
-      const blobUrl = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(blobUrl);
-      return true;
-  };
-
-  const handleDownload = async (dataOverride?: VideoData, saveToDevice: boolean = false) => {
+  const handleDownload = async (type: 'video' | 'audio', dataOverride?: VideoData) => {
     const targetVideo = dataOverride || result;
     if (!targetVideo) return;
     
-    const setStatus = saveToDevice ? setIsSaving : setIsDownloading;
-    setStatus(true);
+    setIsDownloading(true);
     setError(null);
 
-    const formatToUse = dataOverride ? 'video' : selectedFormat;
-    const fileUrl = formatToUse === 'video' ? targetVideo.playUrl : targetVideo.musicUrl!;
-    const ext = formatToUse === 'video' ? 'mp4' : 'mp3';
+    const fileUrl = type === 'video' ? targetVideo.playUrl : targetVideo.musicUrl!;
+    if (!fileUrl) {
+        setError("Download link not available.");
+        setIsDownloading(false);
+        return;
+    }
+
+    const ext = type === 'video' ? 'mp4' : 'mp3';
     const filename = `tiksave-${targetVideo.id}.${ext}`;
-    const mimeType = formatToUse === 'video' ? 'video/mp4' : 'audio/mpeg';
+    const mimeType = type === 'video' ? 'video/mp4' : 'audio/mpeg';
     
     try {
       let blob: Blob | null = null;
@@ -255,7 +223,14 @@ const App = () => {
 
       if (blob) {
           const finalBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
-          await downloadBlob(finalBlob, filename, saveToDevice);
+          const blobUrl = window.URL.createObjectURL(finalBlob);
+          const link = document.createElement('a');
+          link.href = blobUrl;
+          link.download = filename;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          window.URL.revokeObjectURL(blobUrl);
       }
       
     } catch (e) {
@@ -267,10 +242,9 @@ const App = () => {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      if (saveToDevice) setError("Could not save to device directly. Opening in browser...");
-      else setError("Automatic download failed. Opening in new tab...");
+      setError("Automatic download failed. Opening in new tab...");
     } finally {
-      setStatus(false);
+      setIsDownloading(false);
     }
   };
 
@@ -588,47 +562,11 @@ const App = () => {
                     </div>
 
                     <div className="space-y-4 mb-10">
-                        <div 
-                            onClick={() => setSelectedFormat('video')}
-                            className={`p-5 rounded-3xl border-2 flex items-center justify-between cursor-pointer transition-all ${selectedFormat === 'video' ? 'bg-orange-50 dark:bg-orange-900/10 border-primary ring-0' : 'bg-white dark:bg-dark-input border-transparent hover:border-gray-200 dark:hover:border-white/10'}`}
-                        >
-                            <div className="flex items-center gap-5">
-                                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-sm ${selectedFormat === 'video' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                                    <i className="fas fa-video"></i>
-                                </div>
-                                <div>
-                                    <p className="font-bold text-lg text-gray-900 dark:text-white">Video</p>
-                                    <p className="text-sm text-gray-500">HD No Watermark</p>
-                                </div>
-                            </div>
-                            {selectedFormat === 'video' && <i className="fas fa-check-circle text-primary text-2xl"></i>}
-                        </div>
-
-                        {result.musicUrl && (
-                            <div 
-                                onClick={() => setSelectedFormat('audio')}
-                                className={`p-5 rounded-3xl border-2 flex items-center justify-between cursor-pointer transition-all ${selectedFormat === 'audio' ? 'bg-orange-50 dark:bg-orange-900/10 border-primary ring-0' : 'bg-white dark:bg-dark-input border-transparent hover:border-gray-200 dark:hover:border-white/10'}`}
-                            >
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center text-xl shadow-sm ${selectedFormat === 'audio' ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-500'}`}>
-                                        <i className="fas fa-music"></i>
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-lg text-gray-900 dark:text-white">Audio</p>
-                                        <p className="text-sm text-gray-500">MP3 Original</p>
-                                    </div>
-                                </div>
-                                {selectedFormat === 'audio' && <i className="fas fa-check-circle text-primary text-2xl"></i>}
-                            </div>
-                        )}
-                    </div>
-
-                    {error && <p className="text-red-500 text-sm mb-6 text-center bg-red-50 dark:bg-red-900/20 py-3 rounded-xl font-medium">{error}</p>}
-
-                    <div className="space-y-3 pb-8 md:pb-0">
+                        {error && <p className="text-red-500 text-sm mb-6 text-center bg-red-50 dark:bg-red-900/20 py-3 rounded-xl font-medium">{error}</p>}
+                        
                         <button 
-                            onClick={() => handleDownload(undefined, false)}
-                            disabled={isDownloading || isSaving}
+                            onClick={() => handleDownload('video')}
+                            disabled={isDownloading}
                             className="w-full py-5 bg-primary hover:bg-orange-600 text-white font-bold rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg"
                         >
                             {isDownloading ? (
@@ -638,29 +576,22 @@ const App = () => {
                                 </>
                             ) : (
                                 <>
-                                    <i className="fas fa-download"></i>
-                                    <span>Download {selectedFormat === 'video' ? 'Video' : 'Audio'}</span>
+                                    <i className="fas fa-video"></i>
+                                    <span>Download Video (HD)</span>
                                 </>
                             )}
                         </button>
                         
-                        <button 
-                            onClick={() => handleDownload(undefined, true)}
-                            disabled={isDownloading || isSaving}
-                            className="w-full py-5 bg-white dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 hover:border-primary dark:hover:border-primary text-gray-700 dark:text-white font-bold rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg"
-                        >
-                             {isSaving ? (
-                                <>
-                                    <div className="loader w-6 h-6 border-gray-400"></div>
-                                    <span>Saving...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <i className="fas fa-folder-open text-gray-400 dark:text-gray-500"></i>
-                                    <span>Save to Device</span>
-                                </>
-                            )}
-                        </button>
+                        {result.musicUrl && (
+                            <button 
+                                onClick={() => handleDownload('audio')}
+                                disabled={isDownloading}
+                                className="w-full py-5 bg-white dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 hover:border-primary dark:hover:border-primary text-gray-700 dark:text-white font-bold rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-lg"
+                            >
+                                <i className="fas fa-music text-gray-400 dark:text-gray-500"></i>
+                                <span>Download Audio</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
