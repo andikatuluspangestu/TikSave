@@ -6,6 +6,7 @@ interface VideoData {
   id: string;
   url: string;
   playUrl: string;
+  hdPlayUrl?: string; // Added for HD support
   musicUrl?: string;
   cover: string;
   title: string;
@@ -17,6 +18,8 @@ interface VideoData {
     plays: string;
     likes: string;
   };
+  size?: number; // Size in bytes
+  hdSize?: number; // HD Size in bytes
 }
 
 interface HistoryItem {
@@ -96,6 +99,12 @@ const App = () => {
     return { isValid: true, cleanUrl };
   };
 
+  const formatSize = (bytes?: number) => {
+      if (!bytes) return '';
+      const mb = bytes / (1024 * 1024);
+      return `${mb.toFixed(1)} MB`;
+  };
+
   // --- Effects ---
   
   // Use useLayoutEffect for Theme to prevent flicker
@@ -152,6 +161,7 @@ const App = () => {
           id: data.data.id,
           url: cleanUrl,
           playUrl: data.data.play,
+          hdPlayUrl: data.data.hdplay, // Capture HD URL
           musicUrl: data.data.music,
           cover: data.data.cover,
           title: data.data.title,
@@ -159,14 +169,19 @@ const App = () => {
           stats: {
             plays: typeof data.data.play_count === 'number' ? data.data.play_count.toLocaleString() : data.data.play_count,
             likes: typeof data.data.digg_count === 'number' ? data.data.digg_count.toLocaleString() : data.data.digg_count
-          }
+          },
+          size: data.data.size,
+          hdSize: data.data.hd_size
         };
         setResult(videoData);
         addToHistory(videoData);
         setActiveTab('download');
 
         if (autoDownload) {
-          setTimeout(() => handleDownload('video', videoData), 500); 
+          // Prefer HD if available
+          const targetUrl = videoData.hdPlayUrl || videoData.playUrl;
+          const suffix = videoData.hdPlayUrl ? '1080p' : '720p';
+          setTimeout(() => handleDownload(targetUrl, 'video', suffix), 500); 
         }
       } else {
         const msg = data.msg || "Failed to fetch video.";
@@ -193,54 +208,56 @@ const App = () => {
     });
   };
 
-  const handleDownload = async (type: 'video' | 'audio', dataOverride?: VideoData) => {
-    const targetVideo = dataOverride || result;
-    if (!targetVideo) return;
+  // Refactored to accept specific URL and label
+  const handleDownload = async (fileUrl: string, type: 'video' | 'audio', label: string = '') => {
+    if (!result || !fileUrl) return;
     
     setIsDownloading(true);
     setError(null);
 
-    const fileUrl = type === 'video' ? targetVideo.playUrl : targetVideo.musicUrl!;
-    if (!fileUrl) {
-        setError("Download link not available.");
-        setIsDownloading(false);
-        return;
-    }
-
     const ext = type === 'video' ? 'mp4' : 'mp3';
-    const filename = `tiksave-${targetVideo.id}.${ext}`;
+    // Use a clean filename with label
+    const cleanTitle = (result.title || 'video').replace(/[^a-z0-9]/gi, '_').substring(0, 50);
+    const filename = `tiksave_${result.id}_${cleanTitle}_${label}.${ext}`;
     const mimeType = type === 'video' ? 'video/mp4' : 'audio/mpeg';
     
     try {
       let blob: Blob | null = null;
       
-      // Strategy 1: Direct Fetch
-      try {
-          const response = await fetch(fileUrl);
-          if (response.ok) blob = await response.blob();
-      } catch (e) { 
-        // Direct fetch failed, continue to proxies
-      }
-
-      // Strategy 2: CorsProxy.io
-      if (!blob) {
-          try {
-             const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fileUrl)}`;
-             const response = await fetch(proxyUrl);
-             if (response.ok) blob = await response.blob();
-          } catch (e) { 
-            // Proxy 1 failed
+      // Defined strategies to attempt sequential downloading
+      const strategies = [
+          // 1. Direct Fetch with no-referrer
+          async () => {
+              const res = await fetch(fileUrl, { referrerPolicy: 'no-referrer' });
+              if (!res.ok) throw new Error('Direct fetch failed');
+              return await res.blob();
+          },
+          // 2. CorsProxy.io
+          async () => {
+               const res = await fetch(`https://corsproxy.io/?${encodeURIComponent(fileUrl)}`);
+               if (!res.ok) throw new Error('CorsProxy failed');
+               return await res.blob();
+          },
+          // 3. CodeTabs Proxy
+          async () => {
+              const res = await fetch(`https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(fileUrl)}`);
+               if (!res.ok) throw new Error('CodeTabs failed');
+               return await res.blob();
+          },
+          // 4. AllOrigins (Raw)
+          async () => {
+               const res = await fetch(`https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`);
+               if (!res.ok) throw new Error('AllOrigins failed');
+               return await res.blob();
           }
-      }
+      ];
 
-      // Strategy 3: AllOrigins (Backup)
-      if (!blob) {
+      for (const strategy of strategies) {
           try {
-              const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`;
-              const response = await fetch(proxyUrl);
-              if (response.ok) blob = await response.blob();
+              blob = await strategy();
+              if (blob && blob.size > 0) break;
           } catch (e) {
-             // Proxy 2 failed
+              continue;
           }
       }
 
@@ -253,14 +270,14 @@ const App = () => {
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
-          window.URL.revokeObjectURL(blobUrl);
+          
+          setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
       } else {
          throw new Error("Unable to download file via any method.");
       }
       
     } catch (e) {
       console.error("Download failed", e);
-      // Removed the fallback that opens a new tab/window
       setError("Download failed. The server might be blocking requests.");
     } finally {
       setIsDownloading(false);
@@ -515,6 +532,47 @@ const App = () => {
           </div>
       );
 
+      // Prepare Download Options
+      const options = [];
+      
+      // HD Option (if available and distinct)
+      if (result.hdPlayUrl) {
+          options.push({ 
+              label: 'MP4', 
+              quality: 'HD 1080p', 
+              url: result.hdPlayUrl, 
+              size: result.hdSize, 
+              type: 'video' as const, 
+              suffix: '1080p' 
+          });
+      }
+      
+      // Standard Option (Always valid if hdPlayUrl is missing or distinct)
+      // Check if standard is different from HD to avoid duplicates, though TikWM usually provides distinct links or same link.
+      // If HD exists, we label the other as 720p. If only one exists, we just show it.
+      if (!result.hdPlayUrl || result.playUrl !== result.hdPlayUrl) {
+           options.push({ 
+              label: 'MP4', 
+              quality: result.hdPlayUrl ? 'SD 720p' : 'Standard', 
+              url: result.playUrl, 
+              size: result.size, 
+              type: 'video' as const, 
+              suffix: '720p' 
+          });
+      }
+
+      // Audio Option
+      if (result.musicUrl) {
+          options.push({ 
+              label: 'MP3', 
+              quality: 'Audio', 
+              url: result.musicUrl, 
+              size: null, 
+              type: 'audio' as const, 
+              suffix: 'audio' 
+          });
+      }
+
       return (
         <div className="animate-slide-up h-screen w-full flex flex-col md:flex-row bg-light-bg dark:bg-dark-bg overflow-hidden">
             {/* Desktop: Left Side (Video Player) */}
@@ -577,34 +635,31 @@ const App = () => {
                     <div className="space-y-4 mb-10">
                         {error && <p className="text-red-500 text-sm mb-6 text-center bg-red-50 dark:bg-red-900/20 py-3 rounded-xl font-medium">{error}</p>}
                         
-                        <button 
-                            onClick={() => handleDownload('video')}
-                            disabled={isDownloading}
-                            className="w-full py-4 md:py-5 bg-primary hover:bg-orange-600 text-white font-bold rounded-2xl shadow-xl shadow-primary/20 active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-base md:text-lg"
-                        >
-                            {isDownloading ? (
-                                <>
-                                    <div className="loader w-5 h-5 border-2"></div>
-                                    <span>Downloading...</span>
-                                </>
-                            ) : (
-                                <>
-                                    <i className="fas fa-video"></i>
-                                    <span>Download Video (HD)</span>
-                                </>
-                            )}
-                        </button>
-                        
-                        {result.musicUrl && (
-                            <button 
-                                onClick={() => handleDownload('audio')}
-                                disabled={isDownloading}
-                                className="w-full py-4 md:py-5 bg-white dark:bg-white/5 border-2 border-gray-100 dark:border-white/10 hover:border-primary dark:hover:border-primary text-gray-700 dark:text-white font-bold rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-3 text-base md:text-lg"
-                            >
-                                <i className="fas fa-music text-gray-400 dark:text-gray-500"></i>
-                                <span>Download Audio</span>
-                            </button>
-                        )}
+                        <div className="w-full bg-gray-50 dark:bg-white/5 rounded-2xl overflow-hidden border border-gray-100 dark:border-white/5">
+                            {options.map((opt, idx) => (
+                                <button 
+                                    key={idx}
+                                    disabled={isDownloading}
+                                    onClick={() => handleDownload(opt.url, opt.type, opt.suffix)}
+                                    className="w-full flex items-center justify-between p-4 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors border-b border-gray-200 dark:border-white/5 last:border-0 group disabled:opacity-50"
+                                >
+                                    <div className="flex items-center gap-4">
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${opt.type === 'video' ? 'bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400' : 'bg-purple-100 text-purple-600 dark:bg-purple-900/30 dark:text-purple-400'}`}>
+                                            <i className={`fas ${opt.type === 'video' ? 'fa-video' : 'fa-music'}`}></i>
+                                        </div>
+                                        <div className="text-left">
+                                            <p className="font-bold text-gray-900 dark:text-white text-base">{opt.label}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                                                {opt.quality} {opt.size ? `• ${formatSize(opt.size)}` : ''}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-white dark:bg-white/10 flex items-center justify-center text-gray-400 group-hover:text-primary transition-colors shadow-sm">
+                                        {isDownloading ? <div className="loader w-3 h-3 border-2 border-gray-400"></div> : <i className="fas fa-download text-xs"></i>}
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
                     </div>
                 </div>
             </div>
