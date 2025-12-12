@@ -508,8 +508,8 @@ const App = () => {
 
       {/* History Side Panel (Desktop) */}
       {history.length > 0 && (
-          <div className="hidden md:flex flex-col w-80 lg:w-96 h-screen fixed right-0 top-0 bg-white dark:bg-dark-card border-l border-gray-100 dark:border-white/5 overflow-hidden z-20 shadow-2xl shadow-black/5">
-              <div className="p-6 pt-8 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm sticky top-0 z-10">
+          <div className="hidden md:flex flex-col w-80 lg:w-96 h-screen fixed right-0 top-0 bg-white dark:bg-dark-card border-l border-gray-100 dark:border-white/5 overflow-hidden z-40 shadow-2xl shadow-black/5 pt-24">
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm">
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white">Recent Downloads</h3>
                   <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-xs text-primary hover:text-orange-600 transition-colors px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-900/10">Clear All</button>
               </div>
