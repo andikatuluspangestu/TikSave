@@ -213,43 +213,55 @@ const App = () => {
     
     try {
       let blob: Blob | null = null;
+      
+      // Strategy 1: Direct Fetch
       try {
           const response = await fetch(fileUrl);
-          if (!response.ok) throw new Error("Direct fetch failed");
-          blob = await response.blob();
-      } catch (directError) {
+          if (response.ok) blob = await response.blob();
+      } catch (e) { 
+        // Direct fetch failed, continue to proxies
+      }
+
+      // Strategy 2: CorsProxy.io
+      if (!blob) {
           try {
              const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fileUrl)}`;
              const response = await fetch(proxyUrl);
-             if (!response.ok) throw new Error("Proxy fetch failed");
-             blob = await response.blob();
-          } catch (proxyError) {
-             throw new Error("Could not download file data.");
+             if (response.ok) blob = await response.blob();
+          } catch (e) { 
+            // Proxy 1 failed
+          }
+      }
+
+      // Strategy 3: AllOrigins (Backup)
+      if (!blob) {
+          try {
+              const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(fileUrl)}`;
+              const response = await fetch(proxyUrl);
+              if (response.ok) blob = await response.blob();
+          } catch (e) {
+             // Proxy 2 failed
           }
       }
 
       if (blob) {
-          const finalBlob = blob.type === mimeType ? blob : new Blob([blob], { type: mimeType });
+          const finalBlob = new Blob([blob], { type: mimeType });
           const blobUrl = window.URL.createObjectURL(finalBlob);
           const link = document.createElement('a');
           link.href = blobUrl;
-          link.download = filename;
+          link.setAttribute('download', filename);
           document.body.appendChild(link);
           link.click();
           document.body.removeChild(link);
           window.URL.revokeObjectURL(blobUrl);
+      } else {
+         throw new Error("Unable to download file via any method.");
       }
       
     } catch (e) {
       console.error("Download failed", e);
-      const link = document.createElement('a');
-      link.href = fileUrl;
-      link.download = filename;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setError("Automatic download failed. Opening in new tab...");
+      // Removed the fallback that opens a new tab/window
+      setError("Download failed. The server might be blocking requests.");
     } finally {
       setIsDownloading(false);
     }
