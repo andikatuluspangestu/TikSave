@@ -36,6 +36,13 @@ const App = () => {
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<VideoData | null>(null);
   
+  // History Sort State
+  const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc'>('date-desc');
+  
+  // PWA Install State
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [showInstallModal, setShowInstallModal] = useState(false);
+  
   // Lazy State Initialization for Performance
   const [history, setHistory] = useState<HistoryItem[]>(() => {
     if (typeof window === 'undefined') return [];
@@ -105,8 +112,38 @@ const App = () => {
       return `${mb.toFixed(1)} MB`;
   };
 
+  // Get sorted history
+  const getSortedHistory = () => {
+    const sorted = [...history];
+    switch (sortOrder) {
+      case 'date-desc': return sorted.sort((a, b) => b.timestamp - a.timestamp);
+      case 'date-asc': return sorted.sort((a, b) => a.timestamp - b.timestamp);
+      case 'title-asc': return sorted.sort((a, b) => (a.data.title || '').localeCompare(b.data.title || ''));
+      case 'title-desc': return sorted.sort((a, b) => (b.data.title || '').localeCompare(a.data.title || ''));
+      default: return sorted;
+    }
+  };
+
   // --- Effects ---
   
+  // PWA Install Prompt Listener
+  useEffect(() => {
+    const handler = (e: any) => {
+      // Prevent the mini-infobar from appearing on mobile
+      e.preventDefault();
+      // Stash the event so it can be triggered later.
+      setInstallPrompt(e);
+      // Update UI notify the user they can install the PWA
+      setShowInstallModal(true);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
   // Use useLayoutEffect for Theme to prevent flicker
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -137,6 +174,20 @@ const App = () => {
   }, []);
 
   // --- Handlers ---
+  const handleInstallApp = async () => {
+    if (!installPrompt) return;
+    
+    // Show the install prompt
+    installPrompt.prompt();
+    
+    // Wait for the user to respond to the prompt
+    const { outcome } = await installPrompt.userChoice;
+    
+    // We've used the prompt, and can't use it again, discard it
+    setInstallPrompt(null);
+    setShowInstallModal(false);
+  };
+
   const handleProcess = async (inputUrl: string = url) => {
     setError(null);
     
@@ -304,6 +355,29 @@ const App = () => {
   };
 
   // --- Views ---
+  const renderInstallModal = () => {
+    if (!showInstallModal) return null;
+    return (
+      <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 animate-fade-in">
+         <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowInstallModal(false)}></div>
+         <div className="bg-white dark:bg-dark-card w-full max-w-sm rounded-3xl p-6 shadow-2xl relative transform transition-all animate-slide-up border border-gray-100 dark:border-white/10">
+            <div className="flex items-start gap-4 mb-4">
+               <div className="w-12 h-12 bg-gray-100 dark:bg-white/5 rounded-xl flex items-center justify-center shrink-0 border border-gray-200 dark:border-white/5">
+                  <img src="https://cdn-icons-png.flaticon.com/512/724/724933.png" className="w-8 h-8 object-contain" />
+               </div>
+               <div>
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">Install TikSave</h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Add to your home screen for instant access.</p>
+               </div>
+            </div>
+            <div className="flex gap-3">
+               <button onClick={() => setShowInstallModal(false)} className="flex-1 py-3 rounded-xl font-semibold text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors">Not Now</button>
+               <button onClick={handleInstallApp} className="flex-1 py-3 rounded-xl font-semibold text-white bg-primary hover:bg-orange-600 transition-colors shadow-lg shadow-primary/30">Install</button>
+            </div>
+         </div>
+      </div>
+    );
+  };
 
   const renderSettings = () => (
     <div className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ${showSettings ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
@@ -505,11 +579,23 @@ const App = () => {
         {history.length > 0 && (
             <div className="md:hidden pb-6 px-4 w-full max-w-lg mx-auto shrink-0 z-20 relative">
                  <div className="flex justify-between items-center mb-2 px-1">
-                    <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recent</h3>
+                    <div className="flex items-center gap-2">
+                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Recent</h3>
+                        <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value as any)}
+                            className="bg-transparent text-[10px] font-bold text-primary dark:text-primaryLight border-none outline-none cursor-pointer p-0"
+                        >
+                            <option value="date-desc">Newest</option>
+                            <option value="date-asc">Oldest</option>
+                            <option value="title-asc">A-Z</option>
+                            <option value="title-desc">Z-A</option>
+                        </select>
+                    </div>
                     <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md">CLEAR</button>
                 </div>
                 <div className="flex overflow-x-auto gap-3 pb-1 no-scrollbar mask-linear-fade px-1">
-                    {history.map((h, i) => renderHistoryItem(h, i, false))}
+                    {getSortedHistory().map((h, i) => renderHistoryItem(h, i, false))}
                 </div>
             </div>
         )}
@@ -524,11 +610,23 @@ const App = () => {
       {history.length > 0 && (
           <div className="hidden md:flex flex-col w-72 lg:w-80 h-screen fixed right-0 top-0 bg-white dark:bg-dark-card border-l border-gray-100 dark:border-white/5 overflow-hidden z-40 shadow-2xl shadow-black/5 pt-20">
               <div className="px-5 py-3 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm shrink-0">
-                  <h3 className="text-base font-bold text-gray-900 dark:text-white">Recent Downloads</h3>
-                  <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors px-2 py-1 rounded-full bg-orange-50 dark:bg-orange-900/10">Clear All</button>
+                  <div className="flex items-center gap-2">
+                       <h3 className="text-base font-bold text-gray-900 dark:text-white">Recent</h3>
+                       <select
+                            value={sortOrder}
+                            onChange={(e) => setSortOrder(e.target.value as any)}
+                            className="bg-transparent text-[10px] font-medium text-gray-500 dark:text-gray-400 border-none outline-none cursor-pointer hover:text-primary transition-colors appearance-none"
+                        >
+                            <option value="date-desc">Newest</option>
+                            <option value="date-asc">Oldest</option>
+                            <option value="title-asc">Name (A-Z)</option>
+                            <option value="title-desc">Name (Z-A)</option>
+                        </select>
+                  </div>
+                  <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors px-2 py-1 rounded-full bg-orange-50 dark:bg-orange-900/10">Clear</button>
               </div>
               <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
-                  {history.map((h, i) => renderHistoryItem(h, i, true))}
+                  {getSortedHistory().map((h, i) => renderHistoryItem(h, i, true))}
               </div>
           </div>
       )}
@@ -681,6 +779,7 @@ const App = () => {
     <div className="h-screen overflow-hidden font-sans selection:bg-primary selection:text-white transition-colors duration-300 bg-light-bg dark:bg-dark-bg text-gray-900 dark:text-white">
         <main className="w-full mx-auto h-screen relative overflow-hidden transition-all duration-300">
             {renderSettings()}
+            {renderInstallModal()}
             {activeTab === 'home' && renderHome()}
             {activeTab === 'download' && renderDownload()}
         </main>
