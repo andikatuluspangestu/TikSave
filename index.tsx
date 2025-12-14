@@ -8,6 +8,7 @@ const translations = {
     home: "Home",
     discover: "Discover",
     saved: "Saved",
+    history: "History",
     settings: "Settings",
     about: "About",
     pasteLink: "Paste link here",
@@ -50,6 +51,7 @@ const translations = {
     home: "Beranda",
     discover: "Jelajahi",
     saved: "Tersimpan",
+    history: "Riwayat",
     settings: "Pengaturan",
     about: "Tentang",
     pasteLink: "Tempel tautan di sini",
@@ -134,6 +136,7 @@ const App = () => {
   // Sidebar States
   const [showDiscover, setShowDiscover] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [showHistory, setShowHistory] = useState(false); // NEW STATE
   
   // New States
   const [lang, setLang] = useState<'en' | 'id'>(() => (localStorage.getItem('tiksave-lang') as 'en'|'id') || 'en');
@@ -271,9 +274,6 @@ const App = () => {
   };
 
   const fetchTrending = async () => {
-    // Reset or ensure we only fetch if we want to refresh or it's empty
-    // But for the specific keyword requirement, let's allow re-fetching to shuffle if needed, 
-    // or just check if empty to avoid spamming api on every open.
     if (trendingVideos.length > 0) return; 
 
     setIsLoadingTrending(true);
@@ -282,32 +282,35 @@ const App = () => {
     setCurrentKeyword(randomKeyword);
 
     try {
-      // Use search endpoint with random keyword from the list
-      const response = await fetch(`https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(randomKeyword)}`);
+      const response = await fetch(`https://www.tikwm.com/api/feed/search?keywords=${encodeURIComponent(randomKeyword)}&count=12`);
       const data = await response.json();
       
       if (data.code === 0 && data.data) {
-        // Search API typically returns data.data.videos or just data.data
         const list = Array.isArray(data.data) ? data.data : (data.data.videos || []);
         
+        // SAFE MAPPING to prevent crashes
         const mapped: VideoData[] = list.map((item: any) => ({
-          id: item.video_id || item.id,
-          url: `https://www.tiktok.com/@${item.author.unique_id}/video/${item.video_id}`,
+          id: item.video_id || item.id || Math.random().toString(),
+          url: `https://www.tiktok.com/@${item.author?.unique_id || 'user'}/video/${item.video_id}`,
           playUrl: item.play,
           hdPlayUrl: item.hdplay,
           musicUrl: item.music,
           cover: item.cover,
-          title: item.title,
+          title: item.title || '',
           images: item.images,
-          author: { nickname: item.author.nickname, avatar: item.author.avatar },
+          author: { 
+              nickname: item.author?.nickname || 'TikTok User', 
+              avatar: item.author?.avatar || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' 
+          },
           stats: {
-            plays: typeof item.play_count === 'number' ? item.play_count.toLocaleString() : item.play_count,
-            likes: typeof item.digg_count === 'number' ? item.digg_count.toLocaleString() : item.digg_count
+            plays: item.play_count ? (typeof item.play_count === 'number' ? item.play_count.toLocaleString() : item.play_count) : '0',
+            likes: item.digg_count ? (typeof item.digg_count === 'number' ? item.digg_count.toLocaleString() : item.digg_count) : '0'
           }
         }));
         setTrendingVideos(mapped);
       }
     } catch (e) {
+      console.error("Fetch trending failed", e);
       addToast(t.networkError, "error");
     } finally {
       setIsLoadingTrending(false);
@@ -386,7 +389,10 @@ const App = () => {
           cover: data.data.cover,
           title: data.data.title,
           images: data.data.images,
-          author: { nickname: data.data.author.nickname, avatar: data.data.author.avatar },
+          author: { 
+              nickname: data.data.author?.nickname || 'User', 
+              avatar: data.data.author?.avatar || 'https://cdn-icons-png.flaticon.com/512/847/847969.png' 
+          },
           stats: {
             plays: typeof data.data.play_count === 'number' ? data.data.play_count.toLocaleString() : data.data.play_count,
             likes: typeof data.data.digg_count === 'number' ? data.data.digg_count.toLocaleString() : data.data.digg_count
@@ -623,7 +629,7 @@ const App = () => {
                         <p className="text-sm text-gray-500 dark:text-gray-400">Video Downloader & Saver</p>
                     </div>
                     <div className="text-sm text-gray-600 dark:text-gray-300 space-y-2">
-                        <p>Version 2.0.1 (UI Fixes)</p>
+                        <p>Version 2.0.2 (Crash Fixes)</p>
                     </div>
                  </div>
             )}
@@ -632,7 +638,7 @@ const App = () => {
   );
 
   const renderHistoryItem = (h: {data: VideoData}, i: number, vertical: boolean) => (
-    <div key={i} className={`group cursor-pointer ${vertical ? 'w-full flex gap-4 items-center bg-transparent p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors' : 'flex-shrink-0 w-24'}`} onClick={() => { setResult(h.data); setActiveTab('download'); }}>
+    <div key={i} className={`group cursor-pointer ${vertical ? 'w-full flex gap-4 items-center bg-transparent p-2 hover:bg-gray-50 dark:hover:bg-white/5 rounded-xl transition-colors' : 'flex-shrink-0 w-24'}`} onClick={() => { setResult(h.data); setActiveTab('download'); if(showHistory) setShowHistory(false); }}>
         <div className={`relative rounded-xl overflow-hidden bg-gray-200 dark:bg-dark-card border border-gray-100 dark:border-dark-border ${vertical ? 'w-16 h-20 flex-shrink-0' : 'aspect-[3/4] mb-1'}`}>
             <img src={h.data.cover} className="w-full h-full object-cover opacity-90 group-hover:opacity-100 transition-opacity" loading="lazy" />
             <div className="absolute inset-0 flex items-center justify-center"><i className="fas fa-play text-white opacity-0 group-hover:opacity-100 drop-shadow-md"></i></div>
@@ -654,7 +660,7 @@ const App = () => {
           <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] transition-opacity duration-300 ${showDiscover ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setShowDiscover(false)}></div>
           <div className={`fixed inset-y-0 left-0 w-full md:w-[420px] bg-white dark:bg-dark-card z-[100] transform transition-transform duration-300 ease-out shadow-2xl ${showDiscover ? 'translate-x-0' : '-translate-x-full'}`}>
               <div className="flex flex-col h-full relative">
-                  <header className="sticky top-0 left-0 right-0 p-5 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl z-20">
+                  <header className="p-5 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl z-20 flex-shrink-0">
                       <div className="flex flex-col">
                         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><i className="fas fa-compass text-primary"></i> {t.discover}</h2>
                         {currentKeyword && <span className="text-xs text-gray-500 dark:text-gray-400 capitalize mt-1">Ref: {currentKeyword}</span>}
@@ -672,11 +678,11 @@ const App = () => {
                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-90"></div>
                                        <div className="absolute bottom-2 left-2 right-2 text-white">
                                            <div className="flex items-center gap-1.5 mb-1">
-                                               <div className="w-4 h-4 rounded-full overflow-hidden border border-white/30"><img src={item.author.avatar} className="w-full h-full object-cover"/></div>
-                                               <span className="text-[10px] font-semibold truncate opacity-90">{item.author.nickname}</span>
+                                               <div className="w-4 h-4 rounded-full overflow-hidden border border-white/30"><img src={item.author?.avatar || 'https://cdn-icons-png.flaticon.com/512/847/847969.png'} className="w-full h-full object-cover"/></div>
+                                               <span className="text-[10px] font-semibold truncate opacity-90">{item.author?.nickname || 'User'}</span>
                                            </div>
                                             <div className="flex items-center justify-between text-[10px] opacity-70">
-                                               <span className="flex items-center gap-1"><i className="fas fa-play"></i> {item.stats?.plays}</span>
+                                               <span className="flex items-center gap-1"><i className="fas fa-play"></i> {item.stats?.plays || '0'}</span>
                                            </div>
                                        </div>
                                        {item.images && <div className="absolute top-2 right-2 bg-black/60 px-1.5 py-0.5 rounded-full text-[9px] text-white font-bold"><i className="fas fa-images mr-1"></i> Slide</div>}
@@ -695,7 +701,7 @@ const App = () => {
           <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] transition-opacity duration-300 ${showSaved ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setShowSaved(false)}></div>
           <div className={`fixed inset-y-0 right-0 w-full md:w-[420px] bg-white dark:bg-dark-card z-[100] transform transition-transform duration-300 ease-out shadow-2xl ${showSaved ? 'translate-x-0' : 'translate-x-full'}`}>
               <div className="flex flex-col h-full relative">
-                  <header className="sticky top-0 left-0 right-0 p-5 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl z-20">
+                  <header className="p-5 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl z-20 flex-shrink-0">
                       <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><i className="fas fa-heart text-red-500"></i> {t.saved}</h2>
                       <button onClick={() => setShowSaved(false)} className="w-9 h-9 flex items-center justify-center bg-gray-100 dark:bg-white/10 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"><i className="fas fa-times"></i></button>
                   </header>
@@ -725,6 +731,41 @@ const App = () => {
       </>
   );
 
+  const renderHistorySidebar = () => (
+      <>
+          <div className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] transition-opacity duration-300 ${showHistory ? 'opacity-100' : 'opacity-0 pointer-events-none'}`} onClick={() => setShowHistory(false)}></div>
+          <div className={`fixed inset-y-0 right-0 w-full md:w-[420px] bg-white dark:bg-dark-card z-[100] transform transition-transform duration-300 ease-out shadow-2xl ${showHistory ? 'translate-x-0' : 'translate-x-full'}`}>
+              <div className="flex flex-col h-full relative">
+                  <header className="p-5 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/90 dark:bg-dark-card/90 backdrop-blur-xl z-20 flex-shrink-0">
+                      <div className="flex items-center gap-2">
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">{t.history}</h2>
+                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} className="bg-transparent text-[10px] font-medium text-gray-500 dark:text-gray-400 border-none outline-none cursor-pointer hover:text-primary transition-colors appearance-none ml-2">
+                            <option value="date-desc">{t.newest}</option>
+                            <option value="date-asc">{t.oldest}</option>
+                            <option value="title-asc">{t.az}</option>
+                            <option value="title-desc">{t.za}</option>
+                        </select>
+                      </div>
+                      <div className="flex items-center gap-2">
+                         <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors px-3 py-1.5 rounded-full bg-orange-50 dark:bg-orange-900/10 font-bold">{t.clear}</button>
+                         <button onClick={() => setShowHistory(false)} className="w-9 h-9 flex items-center justify-center bg-gray-100 dark:bg-white/10 rounded-full text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-white/20 transition-colors"><i className="fas fa-times"></i></button>
+                      </div>
+                  </header>
+                  <div className="flex-1 overflow-y-auto p-4 no-scrollbar relative z-10 space-y-2">
+                     {history.length === 0 ? (
+                         <div className="flex flex-col items-center justify-center h-64 text-gray-400">
+                             <i className="fas fa-history text-4xl mb-4 opacity-50"></i>
+                             <p>{t.emptyHistory}</p>
+                         </div>
+                     ) : (
+                         getSortedHistory().map((h, i) => renderHistoryItem(h, i, true))
+                     )}
+                  </div>
+              </div>
+          </div>
+      </>
+  );
+
   const renderHome = () => (
     <div className="animate-fade-in relative h-screen w-full flex flex-col md:flex-row md:items-start overflow-hidden">
       {/* Mobile Header */}
@@ -732,6 +773,7 @@ const App = () => {
         <div className="flex gap-3 pointer-events-auto">
             <button onClick={() => setShowDiscover(true)} className="w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-primary shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800"><i className="fas fa-compass"></i></button>
             <button onClick={() => setShowSaved(true)} className="w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-red-500 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800"><i className="fas fa-heart"></i></button>
+            <button onClick={() => setShowHistory(true)} className="w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800"><i className="fas fa-history"></i></button>
         </div>
         <button onClick={() => setShowSettings(true)} className="pointer-events-auto w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-dark-border flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800"><i className="fas fa-cog"></i></button>
       </header>
@@ -741,12 +783,13 @@ const App = () => {
          <div className="flex gap-4 pointer-events-auto">
              <button onClick={() => setShowDiscover(true)} className="px-5 py-2.5 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-white/10 flex items-center gap-2 text-gray-900 dark:text-white font-bold shadow-sm hover:bg-gray-50 transition-colors"><i className="fas fa-compass text-primary"></i> {t.discover}</button>
              <button onClick={() => setShowSaved(true)} className="px-5 py-2.5 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-white/10 flex items-center gap-2 text-gray-900 dark:text-white font-bold shadow-sm hover:bg-gray-50 transition-colors"><i className="fas fa-heart text-red-500"></i> {t.saved}</button>
+             <button onClick={() => setShowHistory(true)} className="px-5 py-2.5 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-white/10 flex items-center gap-2 text-gray-900 dark:text-white font-bold shadow-sm hover:bg-gray-50 transition-colors"><i className="fas fa-history text-gray-500"></i> {t.history}</button>
          </div>
          <button onClick={() => setShowSettings(true)} className="pointer-events-auto w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-light-border dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-300 shadow-sm hover:bg-gray-50 transition-colors"><i className="fas fa-cog"></i></button>
       </header>
 
       {/* Main Content */}
-      <div className={`flex-1 flex flex-col h-screen px-6 md:px-0 relative z-10 w-full transition-all duration-300 ${history.length > 0 ? 'md:mr-80 lg:mr-96' : ''}`}>
+      <div className={`flex-1 flex flex-col h-screen px-6 md:px-0 relative z-10 w-full transition-all duration-300`}>
         <div className="flex-1 flex flex-col justify-center items-center w-full max-w-lg md:max-w-2xl mx-auto text-center space-y-6 md:space-y-10">
             <div className="flex flex-col items-center gap-4 md:gap-6">
                  <div className="hidden md:block relative group mb-2">
@@ -785,44 +828,118 @@ const App = () => {
                  <div className="flex justify-between items-center mb-2 px-1">
                     <div className="flex items-center gap-2">
                         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t.recent}</h3>
-                        <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} className="bg-transparent text-[10px] font-bold text-primary dark:text-primaryLight border-none outline-none cursor-pointer p-0">
-                            <option value="date-desc">{t.newest}</option>
-                            <option value="date-asc">{t.oldest}</option>
-                            <option value="title-asc">{t.az}</option>
-                            <option value="title-desc">{t.za}</option>
-                        </select>
                     </div>
-                    <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md">{t.clear}</button>
+                    <button onClick={() => setShowHistory(true)} className="text-[10px] text-primary hover:text-orange-600 transition-colors bg-orange-50 dark:bg-orange-900/20 px-2 py-0.5 rounded-md font-bold">View All</button>
                 </div>
                 <div className="flex overflow-x-auto gap-3 pb-1 no-scrollbar mask-linear-fade px-1">
-                    {getSortedHistory().map((h, i) => renderHistoryItem(h, i, false))}
+                    {getSortedHistory().slice(0, 5).map((h, i) => renderHistoryItem(h, i, false))}
                 </div>
             </div>
         )}
 
         <footer className="pb-4 pt-2 text-center text-gray-400 dark:text-gray-600 text-[10px] font-medium shrink-0">Build with 🤍 by andikatuluspgstu</footer>
       </div>
+    </div>
+  );
 
-      {/* Desktop Side Panel */}
-      {history.length > 0 && (
-          <div className="hidden md:flex flex-col w-72 lg:w-80 h-screen fixed right-0 top-0 bg-white dark:bg-dark-card border-l border-gray-100 dark:border-white/5 overflow-hidden z-40 shadow-2xl shadow-black/5 pt-20">
-              <div className="px-5 py-3 border-b border-gray-100 dark:border-white/5 flex justify-between items-center bg-white/50 dark:bg-black/20 backdrop-blur-sm shrink-0">
-                  <div className="flex items-center gap-2">
-                       <h3 className="text-base font-bold text-gray-900 dark:text-white">{t.recent}</h3>
-                       <select value={sortOrder} onChange={(e) => setSortOrder(e.target.value as any)} className="bg-transparent text-[10px] font-medium text-gray-500 dark:text-gray-400 border-none outline-none cursor-pointer hover:text-primary transition-colors appearance-none">
-                            <option value="date-desc">{t.newest}</option>
-                            <option value="date-asc">{t.oldest}</option>
-                            <option value="title-asc">{t.az}</option>
-                            <option value="title-desc">{t.za}</option>
-                        </select>
-                  </div>
-                  <button onClick={() => {setHistory([]); localStorage.removeItem('tiksave-history')}} className="text-[10px] text-primary hover:text-orange-600 transition-colors px-2 py-1 rounded-full bg-orange-50 dark:bg-orange-900/10">{t.clear}</button>
-              </div>
-              <div className="flex-1 overflow-y-auto p-3 space-y-2 no-scrollbar">
-                  {getSortedHistory().map((h, i) => renderHistoryItem(h, i, true))}
-              </div>
+  const renderDownload = () => {
+    if (!result) return null;
+    return (
+      <div className="animate-fade-in min-h-screen p-6 flex flex-col items-center max-w-4xl mx-auto pt-20">
+         <div className="w-full flex justify-between items-center mb-8 px-4">
+            <button onClick={() => { setActiveTab('home'); setUrl(''); }} className="w-10 h-10 rounded-full bg-white dark:bg-dark-card border border-gray-200 dark:border-white/10 flex items-center justify-center text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-white/20 transition-colors shadow-sm"><i className="fas fa-arrow-left"></i></button>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t.download}</h2>
+            <div className="w-10"></div>
+         </div>
+
+         <div className="w-full bg-white dark:bg-dark-card rounded-3xl p-6 shadow-xl border border-gray-100 dark:border-white/5 flex flex-col md:flex-row gap-8">
+             {/* Media Preview */}
+             <div className="w-full md:w-1/3 shrink-0">
+                <div className="aspect-[3/4] rounded-2xl overflow-hidden bg-gray-200 dark:bg-black/50 relative shadow-inner">
+                   <img src={result.cover} className="w-full h-full object-cover" />
+                   {result.stats && (
+                     <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-4 text-xs font-bold text-white drop-shadow-md bg-black/30 py-1 backdrop-blur-sm">
+                        <span className="flex items-center gap-1"><i className="fas fa-play"></i> {result.stats.plays}</span>
+                        <span className="flex items-center gap-1"><i className="fas fa-heart"></i> {result.stats.likes}</span>
+                     </div>
+                   )}
+                </div>
+             </div>
+
+             {/* Details & Actions */}
+             <div className="flex-1 flex flex-col">
+                <div className="flex items-center gap-3 mb-6">
+                   <img src={result.author.avatar} className="w-12 h-12 rounded-full border border-gray-200 dark:border-white/10 bg-gray-100 object-cover" />
+                   <div className="overflow-hidden">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-lg truncate">@{result.author.nickname}</h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">{result.title}</p>
+                   </div>
+                </div>
+
+                <div className="flex-1 space-y-3">
+                   {result.images ? (
+                       <div className="space-y-3">
+                         <div className="p-4 bg-orange-50 dark:bg-orange-900/10 rounded-2xl border border-orange-100 dark:border-orange-900/20 text-center">
+                            <p className="text-orange-600 dark:text-orange-400 font-bold mb-2"><i className="fas fa-images"></i> Slideshow</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">{result.images.length} Photos</p>
+                            <button onClick={handleBatchDownload} disabled={isDownloading} className="w-full py-3 bg-primary hover:bg-orange-600 text-white rounded-xl font-bold shadow-lg shadow-primary/30 transition-all flex items-center justify-center gap-2">
+                               {isDownloading ? <div className="loader w-4 h-4 border-2 rounded-full border-white/30 border-t-white animate-spin"></div> : <><i className="fas fa-download"></i> {t.batchDownload}</>}
+                            </button>
+                         </div>
+                       </div>
+                   ) : (
+                       <div className="space-y-3">
+                          <button onClick={() => handleDownload(result.playUrl, 'video', 'no_wm')} disabled={isDownloading} className="w-full py-3 bg-primary hover:bg-orange-600 text-white rounded-xl font-bold shadow-lg shadow-primary/30 transition-all flex items-center justify-between px-6">
+                             <span className="flex items-center gap-2"><i className="fas fa-download"></i> Video (No WM)</span>
+                             <span className="text-xs opacity-70">{formatSize(result.size)}</span>
+                          </button>
+                          
+                          {result.hdPlayUrl && (
+                              <button onClick={() => handleDownload(result.hdPlayUrl!, 'video', 'hd_no_wm')} disabled={isDownloading} className="w-full py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-bold shadow-lg transition-all flex items-center justify-between px-6">
+                                 <span className="flex items-center gap-2"><i className="fas fa-bolt"></i> HD Video</span>
+                                 <span className="text-xs opacity-70">{formatSize(result.hdSize)}</span>
+                              </button>
+                          )}
+                       </div>
+                   )}
+                   
+                   {result.musicUrl && (
+                      <button onClick={() => handleDownload(result.musicUrl!, 'audio', 'audio')} disabled={isDownloading} className="w-full py-3 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold shadow-lg shadow-green-500/30 transition-all flex items-center justify-center gap-2 mt-4">
+                         <i className="fas fa-music"></i> Audio (MP3)
+                      </button>
+                   )}
+
+                   <div className="pt-4 border-t border-gray-100 dark:border-white/5 mt-4">
+                        <button onClick={() => { if(result.url) copyToClipboard(result.url); }} className="w-full py-2.5 bg-gray-100 dark:bg-white/5 hover:bg-gray-200 dark:hover:bg-white/10 text-gray-600 dark:text-gray-300 rounded-xl font-semibold text-sm transition-colors flex items-center justify-center gap-2">
+                             <i className="fas fa-link"></i> Copy Original Link
+                        </button>
+                   </div>
+                </div>
+             </div>
+         </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-light-bg dark:bg-dark-bg transition-colors duration-200 font-sans">
+      {renderInstallModal()}
+      {renderTutorial()}
+      {renderSettings()}
+      {renderDiscoverSidebar()}
+      {renderSavedSidebar()}
+      {renderHistorySidebar()}
+
+      <div className="fixed top-6 left-1/2 -translate-x-1/2 z-[120] flex flex-col gap-2 pointer-events-none w-full max-w-sm px-4">
+        {toasts.map(toast => (
+          <div key={toast.id} className={`pointer-events-auto px-4 py-3 rounded-2xl shadow-xl flex items-center gap-3 animate-slide-down backdrop-blur-md ${toast.type === 'error' ? 'bg-red-500/90 text-white' : toast.type === 'success' ? 'bg-green-500/90 text-white' : 'bg-gray-800/90 text-white'}`}>
+             <i className={`fas ${toast.type === 'success' ? 'fa-check-circle' : toast.type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}`}></i>
+             <span className="text-sm font-bold flex-1">{toast.message}</span>
           </div>
-      )}
+        ))}
+      </div>
+
+      {activeTab === 'home' ? renderHome() : renderDownload()}
     </div>
   );
 };
