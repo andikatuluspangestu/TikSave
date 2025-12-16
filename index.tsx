@@ -136,7 +136,7 @@ const App = () => {
   // Sidebar States
   const [showDiscover, setShowDiscover] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [showHistory, setShowHistory] = useState(false); // NEW STATE
+  const [showHistory, setShowHistory] = useState(false);
   
   // New States
   const [lang, setLang] = useState<'en' | 'id'>(() => (localStorage.getItem('tiksave-lang') as 'en'|'id') || 'en');
@@ -157,9 +157,13 @@ const App = () => {
   // History Sort State
   const [sortOrder, setSortOrder] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc'>('date-desc');
   
-  // PWA Install State
+  // PWA Install State & Usage Tracking
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [showInstallModal, setShowInstallModal] = useState(false);
+  const [downloadCount, setDownloadCount] = useState(() => {
+     if (typeof window === 'undefined') return 0;
+     return parseInt(localStorage.getItem('tiksave-download-count') || '0');
+  });
   
   // History
   const [history, setHistory] = useState<HistoryItem[]>(() => {
@@ -319,14 +323,18 @@ const App = () => {
 
   // --- Effects ---
   useEffect(() => {
-    const handler = (e: any) => { e.preventDefault(); setInstallPrompt(e); setShowInstallModal(true); };
+    // Only capture the event, do not show modal immediately
+    const handler = (e: any) => { 
+        e.preventDefault(); 
+        setInstallPrompt(e); 
+    };
     window.addEventListener('beforeinstallprompt', handler);
     window.addEventListener('focus', checkClipboard);
     return () => {
       window.removeEventListener('beforeinstallprompt', handler);
       window.removeEventListener('focus', checkClipboard);
     };
-  }, [url]);
+  }, []);
 
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
@@ -404,6 +412,16 @@ const App = () => {
         addToHistory(videoData);
         setActiveTab('download');
         addToast(t.loading.replace("...", " OK!"), "success");
+
+        // Increment usage count for PWA prompt
+        const newCount = downloadCount + 1;
+        setDownloadCount(newCount);
+        localStorage.setItem('tiksave-download-count', newCount.toString());
+        
+        // Trigger Install Modal on 2nd successful download if prompt is available
+        if (newCount === 2 && installPrompt) {
+            setShowInstallModal(true);
+        }
 
         if (autoDownload && !videoData.images) {
           const targetUrl = videoData.hdPlayUrl || videoData.playUrl;
